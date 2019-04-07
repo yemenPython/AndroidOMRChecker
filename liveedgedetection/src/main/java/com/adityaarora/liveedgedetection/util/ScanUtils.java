@@ -13,8 +13,10 @@ import android.util.Log;
 import android.util.TypedValue;
 import android.view.Display;
 import android.view.Surface;
+import android.os.Environment;
 
 import com.adityaarora.liveedgedetection.view.Quadrilateral;
+import com.adityaarora.liveedgedetection.constants.ScanConstants;
 
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
@@ -27,7 +29,14 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.utils.Converters;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.BufferedReader;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -436,6 +445,80 @@ public class ScanUtils {
         mReturnParams[0] = mDirectory.getAbsolutePath();
         mReturnParams[1] = mFileName;
         return mReturnParams;
+    }
+
+
+    public static boolean saveImg(Bitmap bitmap, String folder, String name) {
+        // default args
+        return saveImg(bitmap, folder, name, 95);
+    }
+
+    public static boolean saveImg(Bitmap bitmap, String folderpath, String filename, int mQuality) {
+
+        try {
+            Log.d("custom"+TAG, "saveImg: Making new directories for" + folderpath);
+            File folder = new File(folderpath);
+            folder.mkdirs();
+
+            Log.d("custom"+TAG, "saveImg: Touching filename: " + filename);
+            File file = new File(folder,filename);
+            file.createNewFile();
+
+            FileOutputStream mFileOutputStream = new FileOutputStream(file);
+            //Compress method used on the Bitmap object to write  image to output stream
+            bitmap.compress(Bitmap.CompressFormat.JPEG, mQuality, mFileOutputStream);
+            mFileOutputStream.close();
+        } catch (Exception e) {
+            Log.e("custom"+TAG, e.getMessage(), e);
+            return false;
+        }
+        return true;
+    }
+
+    public static byte[] readBytes(String source) {
+        File file = new File(source);
+        int length = (int) file.length();
+        byte[] bytes = new byte[length];
+        FileInputStream in;
+        try {
+            in = new FileInputStream(file);
+            in.read(bytes);
+            in.close();
+        }
+        catch (FileNotFoundException e) {
+            Log.e("custom"+TAG, "File not found: " + e.toString());
+        }
+        catch (IOException e) {
+            Log.e("custom"+TAG, "File not readable: " + e.toString());
+        }
+        return bytes;
+    }
+    public static boolean writeBytes(byte[] bytes, String dest) {
+        File file = new File(dest);
+        FileOutputStream stream;
+        try {
+            stream = new FileOutputStream(file);
+            stream.write(bytes);
+            stream.close();
+        }
+        catch (FileNotFoundException e) {
+            Log.e("custom"+TAG, "File not found: " + e.toString());
+            return false;
+        }
+        catch (IOException e) {
+            Log.e("custom"+TAG, "File not readable: " + e.toString());
+            return false;
+        }
+
+        return true;
+    }
+    public static boolean copyFile(String source, String dest, Context context) {
+//        String data = readFromFile(source,context);
+//        return writeToFile(data,dest,context);
+
+        byte[] bytes = readBytes(source);
+        writeBytes(bytes, dest);
+        return true;
     }
 
     private static File getBaseDirectoryFromPathString(String mPath, Context mContext) {

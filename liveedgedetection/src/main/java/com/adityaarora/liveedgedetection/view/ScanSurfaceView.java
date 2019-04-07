@@ -3,6 +3,8 @@ package com.adityaarora.liveedgedetection.view;
 import android.app.Activity;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory
+        ;
 import android.graphics.Color;
 import android.graphics.ImageFormat;
 import android.graphics.Matrix;
@@ -12,11 +14,14 @@ import android.graphics.drawable.shapes.PathShape;
 import android.hardware.Camera;
 import android.media.AudioManager;
 import android.os.CountDownTimer;
+import android.os.Environment;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.FrameLayout;
 
+
+import com.adityaarora.liveedgedetection.R;
 import com.adityaarora.liveedgedetection.constants.ScanConstants;
 import com.adityaarora.liveedgedetection.enums.ScanHint;
 import com.adityaarora.liveedgedetection.interfaces.IScanner;
@@ -30,6 +35,7 @@ import org.opencv.core.Point;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -56,11 +62,35 @@ public class ScanSurfaceView extends FrameLayout implements SurfaceHolder.Callba
     private Camera.Size previewSize;
     private boolean isCapturing = false;
 
+
+
     public ScanSurfaceView(Context context, IScanner iScanner) {
         super(context);
         mSurfaceView = new SurfaceView(context);
         addView(mSurfaceView);
         this.context = context;
+
+        //    Android/data/appname  --> context.getFilesDir or getExternalFilesDir (Any files that are private to the application)
+        //    emulated/0/Downloads --> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
+        // another source:  Environment.getExternalStorageDirectory().getAbsolutePath() + "/Downloads"
+
+        String APPDATA_FOLDER = context.getExternalFilesDir(null).getAbsolutePath()+"/";
+        Log.d("custom"+TAG,"STORAGE_FOLDER: "+ScanConstants.STORAGE_FOLDER);
+        Log.d("custom"+TAG,"APPDATA_FOLDER: "+APPDATA_FOLDER);
+        Log.d("custom"+TAG,"Marker PATH: "+ScanConstants.STORAGE_FOLDER+ ScanConstants.MARKER_NAME);
+
+        File mFile = new File (ScanConstants.STORAGE_FOLDER, ScanConstants.MARKER_NAME);
+        if(! mFile.exists()){
+            Bitmap bm = BitmapFactory.decodeResource( getResources(), R.drawable.default_omr_marker);
+            boolean done = ScanUtils.saveImg(bm,ScanConstants.STORAGE_FOLDER,ScanConstants.MARKER_NAME);
+            if(done)
+                Log.d("custom"+TAG,"Marker copied successfully to storage folder.");
+            else
+                Log.d("custom"+TAG,"Error copying Marker to storage folder.");
+        }
+        else{
+            Log.d("custom"+TAG,"Marker found in storage folder");
+        }
         this.scanCanvasView = new ScanCanvasView(context);
         addView(scanCanvasView);
         SurfaceHolder surfaceHolder = mSurfaceView.getHolder();
@@ -167,6 +197,7 @@ public class ScanSurfaceView extends FrameLayout implements SurfaceHolder.Callba
         public void onPreviewFrame(byte[] data, Camera camera) {
             if (null != camera) {
                 try {
+                    // CALLBACK FOR HANDLING IMAGES
                     Camera.Size pictureSize = camera.getParameters().getPreviewSize();
                     Log.d(TAG, "onPreviewFrame - received image " + pictureSize.width + "x" + pictureSize.height);
 
@@ -181,16 +212,26 @@ public class ScanSurfaceView extends FrameLayout implements SurfaceHolder.Callba
                     int originalPreviewArea = mat.rows() * mat.cols();
 
                     Quadrilateral largestQuad = ScanUtils.detectLargestQuadrilateral(mat);
+//                    Quadrilateral largestQuad = ScanUtils.detectLargestQuadrilateral(marker, mat);
                     clearAndInvalidateCanvas();
 
                     mat.release();
-
+                    //TODO Rough
+                    // import Finalcircle.jpg
+                    // Find where to put template matching code
+                    // change to showing circles instead of page outline / do both
+                    //
+                    // cancel button should show right when "hold still" is displayed. Picture be saved via a thread to save time (overwrite if ctr not incremented).
+                    //
                     if (null != largestQuad) {
+                        Log.d(TAG, "drawLargestRect called ");
                         drawLargestRect(largestQuad.contour, largestQuad.points, originalPreviewSize, originalPreviewArea);
                     } else {
                         showFindingReceiptHint();
                     }
+
                 } catch (Exception e) {
+                    Log.d(TAG, "Uh oh.. Camera error?");
                     showFindingReceiptHint();
                 }
             }

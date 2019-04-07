@@ -44,6 +44,7 @@ import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.imgproc.Imgproc;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
@@ -57,12 +58,17 @@ import static android.view.View.GONE;
 public class ScanActivity extends AppCompatActivity implements IScanner, View.OnClickListener {
     private static final String TAG = ScanActivity.class.getSimpleName();
 
+    // this int is like a CSRF token
     private static final int MY_PERMISSIONS_REQUEST_CAMERA = 101;
+    private static final int MY_PERMISSIONS_REQUEST_STORAGE = 101;
 
+    private boolean isCameraPermissionNotGranted;
+    private boolean isStoragePermissionNotGranted;
+    
     private ViewGroup containerScan;
     private FrameLayout cameraPreviewLayout;
     private ScanSurfaceView mImageSurfaceView;
-    private boolean isPermissionNotGranted;
+    
     private static final String mOpenCvLibrary = "opencv_java3";
     private static ProgressDialogFragment progressDialogFragment;
     private TextView captureHintText;
@@ -81,7 +87,6 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_scan);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
-
         init();
     }
 
@@ -106,27 +111,56 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
                 mImageSurfaceView.setPreviewCallback();
             }
         });
+        checkStoragePermissions();
         checkCameraPermissions();
     }
 
     private void checkCameraPermissions() {
-        if (ContextCompat.checkSelfPermission(this,
-                Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
-            isPermissionNotGranted = true;
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CAMERA)
+                != PackageManager.PERMISSION_GRANTED) {
+            isCameraPermissionNotGranted = true;
             if (ActivityCompat.shouldShowRequestPermissionRationale(this,
                     Manifest.permission.CAMERA)) {
-                Toast.makeText(this, "Enable camera permission from settings", Toast.LENGTH_SHORT).show();
+                Log.d("custom"+TAG,"Enable camera permission from settings (App info)");
+
+                Toast.makeText(this, "Enable camera permission from settings (App info)", Toast.LENGTH_SHORT).show();
             } else {
                 ActivityCompat.requestPermissions(this,
                         new String[]{Manifest.permission.CAMERA},
                         MY_PERMISSIONS_REQUEST_CAMERA);
             }
         } else {
-            if (!isPermissionNotGranted) {
+            if (!isCameraPermissionNotGranted) {
                 mImageSurfaceView = new ScanSurfaceView(ScanActivity.this, this);
                 cameraPreviewLayout.addView(mImageSurfaceView);
             } else {
-                isPermissionNotGranted = false;
+                isCameraPermissionNotGranted = false;
+            }
+        }
+    }
+
+    private void checkStoragePermissions() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            isStoragePermissionNotGranted = true;
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+                Log.d("custom"+TAG,"Enable storage permission from settings (App info)");
+                Toast.makeText(this, "Enable storage permission from settings (App info)", Toast.LENGTH_SHORT).show();
+            } else {
+                // Show the accept popup
+                ActivityCompat.requestPermissions(this,
+                        new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                        MY_PERMISSIONS_REQUEST_STORAGE);
+            }
+        } else {
+            if (!isStoragePermissionNotGranted) {
+                // create intermediate directories
+                Log.d("custom"+TAG,"(First permission grant) Creating directories...");
+                File mFile = new File (ScanConstants.STORAGE_FOLDER);
+                mFile.mkdirs();
+            } else {
+                isStoragePermissionNotGranted = false;
             }
         }
     }
@@ -166,7 +200,8 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
     }
 
     @Override
-    public void displayHint(ScanHint scanHint) {
+    public void displayHint
+            (ScanHint scanHint) {
         captureHintLayout.setVisibility(View.VISIBLE);
         switch (scanHint) {
             case MOVE_CLOSER:
@@ -288,7 +323,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
             croppedBitmap = copyBitmap;
         }
 
-        String path = ScanUtils.saveToInternalMemory(croppedBitmap, ScanConstants.IMAGE_DIR,
+        String path = ScanUtils.saveToInternalMemory(croppedBitmap, ScanConstants.IMAGES_DIR,
                 ScanConstants.IMAGE_NAME, ScanActivity.this, 90)[0];
         setResult(Activity.RESULT_OK, new Intent().putExtra(ScanConstants.SCANNED_RESULT, path));
         //bitmap.recycle();
