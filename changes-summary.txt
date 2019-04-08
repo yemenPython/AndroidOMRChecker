@@ -10,6 +10,20 @@ UI changes -
 
 Code-only changes -
     Debug findLargestContour dont work on light backgrounds
-        -> Make a debug view to see intermediate bitmaps!
+        //-> Less Preprocessing - only gray-n-threshold! No canny, They not morphing the image beforehand!
+        // **** -> (XRAY Button) Make a debug view to see intermediate bitmaps!
+                Nope, it only overlays! -  onPictureClicked is the place
+                    -> everything is drawn over scanCanvasView _//
+    // Debug when adjust angle is shown: its based on maxCosine - seems good when tuned.
     // change onPictureClicked
     add matchTemplate
+
+
+**** : You can have the app show all these effects to get more "familiar" with them.
+//--> canny output
+//--> morph output
+--> template matching output
+
+just4fun :
+-> morph close on raw input
+-> histogram on raw input

@@ -1,11 +1,15 @@
 package com.adityaarora.liveedgedetection.view;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.drawable.shapes.Shape;
 import android.util.AttributeSet;
+import android.util.Log;
 import android.view.View;
+
+import com.adityaarora.liveedgedetection.util.ScanUtils;
 
 import java.util.ArrayList;
 
@@ -15,7 +19,8 @@ import java.util.ArrayList;
 public class ScanCanvasView extends View {
 
     private final ArrayList<ScanShape> shapes = new ArrayList<>();
-
+    public Bitmap cameraBitmap;
+    private boolean cameraBitmapSet=false;
     public ScanCanvasView(Context context) {
         super(context);
     }
@@ -58,10 +63,24 @@ public class ScanCanvasView extends View {
             return mShape;
         }
     }
+    public void unsetCameraBitmap() {
+        cameraBitmapSet = false;
+    }
+    public void setCameraBitmap(Bitmap bm) {
+        this.cameraBitmap = bm;
+        cameraBitmapSet = true;
+    }
 
     @Override
     protected void onDraw(Canvas canvas) {
+        // draw the frame.
         super.onDraw(canvas);
+        if(cameraBitmapSet) {
+            if(cameraBitmap.getWidth() != this.getWidth() || cameraBitmap.getHeight() != this.getHeight())
+                cameraBitmap = ScanUtils.resizeToScreenContentSize(cameraBitmap, this.getWidth(),this.getHeight());
+            canvas.drawBitmap(cameraBitmap, 0, 0, null);
+            return;
+        }
 
         // allocations per draw cycle.
         int paddingLeft = getPaddingLeft();
@@ -79,24 +98,24 @@ public class ScanCanvasView extends View {
 
     }
 
-    public ScanShape addShape(Shape shape, Paint paint) {
-        ScanShape scanShape = new ScanShape(shape, paint);
-        shapes.add(scanShape);
-        return scanShape;
-    }
-
     public void addShape(Shape shape, Paint paint, Paint border) {
         ScanShape scanShape = new ScanShape(shape, paint, border);
         shapes.add(scanShape);
     }
 
-    public void removeShape(ScanShape shape) {
-        shapes.remove(shape);
-    }
-
-    public void removeShape(int index) {
-        shapes.remove(index);
-    }
+//    public ScanShape addShape(Shape shape, Paint paint) {
+//        ScanShape scanShape = new ScanShape(shape, paint);
+//        shapes.add(scanShape);
+//        return scanShape;
+//    }
+//
+//    public void removeShape(ScanShape shape) {
+//        shapes.remove(shape);
+//    }
+//
+//    public void removeShape(int index) {
+//        shapes.remove(index);
+//    }
 
     public void clear() {
         shapes.clear();

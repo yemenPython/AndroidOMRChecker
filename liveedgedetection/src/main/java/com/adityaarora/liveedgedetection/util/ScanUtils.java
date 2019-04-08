@@ -8,22 +8,22 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.graphics.PointF;
 import android.hardware.Camera;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.Display;
 import android.view.Surface;
-import android.os.Environment;
 
+import com.adityaarora.liveedgedetection.constants.SC;
 import com.adityaarora.liveedgedetection.view.Quadrilateral;
-import com.adityaarora.liveedgedetection.constants.ScanConstants;
 
 import org.opencv.android.Utils;
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
+import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
+import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.utils.Converters;
@@ -31,12 +31,8 @@ import org.opencv.utils.Converters;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStreamWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -45,8 +41,6 @@ import java.util.List;
 import java.util.Map;
 
 import static org.opencv.core.CvType.CV_8UC1;
-import static org.opencv.imgproc.Imgproc.THRESH_BINARY;
-import static org.opencv.imgproc.Imgproc.THRESH_OTSU;
 
 /**
  * This class provides utilities for camera.
@@ -117,149 +111,6 @@ public class ScanUtils {
         return previewSizeList.get(0);
     }
 
-    public static int getDisplayOrientation(Activity activity, int cameraId) {
-        Camera.CameraInfo info = new Camera.CameraInfo();
-        int rotation = activity.getWindowManager().getDefaultDisplay().getRotation();
-        int degrees = 0;
-        DisplayMetrics dm = new DisplayMetrics();
-
-        Camera.getCameraInfo(cameraId, info);
-        activity.getWindowManager().getDefaultDisplay().getMetrics(dm);
-
-        switch (rotation) {
-            case Surface.ROTATION_0:
-                degrees = 0;
-                break;
-            case Surface.ROTATION_90:
-                degrees = 90;
-                break;
-            case Surface.ROTATION_180:
-                degrees = 180;
-                break;
-            case Surface.ROTATION_270:
-                degrees = 270;
-                break;
-        }
-
-        int displayOrientation;
-        if (info.facing == Camera.CameraInfo.CAMERA_FACING_FRONT) {
-            displayOrientation = (info.orientation + degrees) % 360;
-            displayOrientation = (360 - displayOrientation) % 360;
-        } else {
-            displayOrientation = (info.orientation - degrees + 360) % 360;
-        }
-        return displayOrientation;
-    }
-
-    public static Camera.Size getOptimalPictureSize(Camera camera, final int width, final int height, final Camera.Size previewSize) {
-        if (camera == null) return null;
-        Camera.Parameters cameraParams = camera.getParameters();
-        List<Camera.Size> supportedSizes = cameraParams.getSupportedPictureSizes();
-
-        Camera.Size size = camera.new Size(width, height);
-
-        // convert to landscape if necessary
-        if (size.width < size.height) {
-            int temp = size.width;
-            size.width = size.height;
-            size.height = temp;
-        }
-
-        Camera.Size requestedSize = camera.new Size(size.width, size.height);
-
-        double previewAspectRatio = (double) previewSize.width / (double) previewSize.height;
-
-        if (previewAspectRatio < 1.0) {
-            // reset ratio to landscape
-            previewAspectRatio = 1.0 / previewAspectRatio;
-        }
-
-        Log.d(TAG, "CameraPreview previewAspectRatio " + previewAspectRatio);
-
-        double aspectTolerance = 0.1;
-        double bestDifference = Double.MAX_VALUE;
-
-        for (int i = 0; i < supportedSizes.size(); i++) {
-            Camera.Size supportedSize = supportedSizes.get(i);
-
-            // Perfect match
-            if (supportedSize.equals(requestedSize)) {
-                Log.d(TAG, "CameraPreview optimalPictureSize " + supportedSize.width + 'x' + supportedSize.height);
-                return supportedSize;
-            }
-
-            double difference = Math.abs(previewAspectRatio - ((double) supportedSize.width / (double) supportedSize.height));
-
-            if (difference < bestDifference - aspectTolerance) {
-                // better aspectRatio found
-                if ((width != 0 && height != 0) || (supportedSize.width * supportedSize.height < 2048 * 1024)) {
-                    size.width = supportedSize.width;
-                    size.height = supportedSize.height;
-                    bestDifference = difference;
-                }
-            } else if (difference < bestDifference + aspectTolerance) {
-                // same aspectRatio found (within tolerance)
-                if (width == 0 || height == 0) {
-                    // set highest supported resolution below 2 Megapixel
-                    if ((size.width < supportedSize.width) && (supportedSize.width * supportedSize.height < 2048 * 1024)) {
-                        size.width = supportedSize.width;
-                        size.height = supportedSize.height;
-                    }
-                } else {
-                    // check if this pictureSize closer to requested width and height
-                    if (Math.abs(width * height - supportedSize.width * supportedSize.height) < Math.abs(width * height - size.width * size.height)) {
-                        size.width = supportedSize.width;
-                        size.height = supportedSize.height;
-                    }
-                }
-            }
-        }
-        Log.d(TAG, "CameraPreview optimalPictureSize " + size.width + 'x' + size.height);
-        return size;
-    }
-
-    public static Camera.Size getOptimalPreviewSize(int displayOrientation, List<Camera.Size> sizes, int w, int h) {
-        final double ASPECT_TOLERANCE = 0.1;
-        double targetRatio = (double) w / h;
-        if (displayOrientation == 90 || displayOrientation == 270) {
-            targetRatio = (double) h / w;
-        }
-
-        if (sizes == null) {
-            return null;
-        }
-
-        Camera.Size optimalSize = null;
-        double minDiff = Double.MAX_VALUE;
-
-        int targetHeight = h;
-
-        // Try to find an size match aspect ratio and size
-        for (Camera.Size size : sizes) {
-            double ratio = (double) size.width / size.height;
-            if (Math.abs(ratio - targetRatio) > ASPECT_TOLERANCE) continue;
-            if (Math.abs(size.height - targetHeight) < minDiff) {
-                optimalSize = size;
-                minDiff = Math.abs(size.height - targetHeight);
-            }
-        }
-
-        // Cannot find the one match the aspect ratio, ignore the requirement
-        if (optimalSize == null) {
-            minDiff = Double.MAX_VALUE;
-            for (Camera.Size size : sizes) {
-                if (Math.abs(size.height - targetHeight) < minDiff) {
-                    optimalSize = size;
-                    minDiff = Math.abs(size.height - targetHeight);
-                }
-            }
-        }
-
-        Log.d("optimal preview size", "w: " + optimalSize.width + " h: " + optimalSize.height);
-        return optimalSize;
-    }
-
-
     public static int configureCameraAngle(Activity activity) {
         int angle;
 
@@ -285,36 +136,32 @@ public class ScanUtils {
         return angle;
     }
 
-    public static Quadrilateral detectLargestQuadrilateral(Mat mat) {
-        Mat mGrayMat = new Mat(mat.rows(), mat.cols(), CV_8UC1);
-        Imgproc.cvtColor(mat, mGrayMat, Imgproc.COLOR_BGR2GRAY, 4);
-        Imgproc.threshold(mGrayMat, mGrayMat, 150, 255, THRESH_BINARY + THRESH_OTSU);
+    public static void thresh(Mat processedMat) {
+        Imgproc.threshold(processedMat, processedMat, 150, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
+    }
+    public static void canny(Mat processedMat) {
+        Imgproc.Canny(processedMat, processedMat, SC.CANNY_THRESHOLD_U, SC.CANNY_THRESHOLD_L, 3, false);
+    }
+    public static void morph(Mat processedMat) {
+        // Close the small holes, i.e. Complete the edges on canny image
+        Mat kernel = new Mat(new Size(SC.KSIZE_CLOSE, SC.KSIZE_CLOSE), CvType.CV_8UC1, new Scalar(255));
+        Imgproc.morphologyEx(processedMat, processedMat, Imgproc.MORPH_CLOSE, kernel);
+    }
+    public static void cannyMorph(Mat processedMat) {
+        canny(processedMat);
+        morph(processedMat);
+    }
+    public static Quadrilateral findPage(Mat processedMat) {
+        //Better results than threshold : Canny then Morph
+        cannyMorph(processedMat);
 
-        List<MatOfPoint> largestContour = findLargestContour(mGrayMat);
-        if (null != largestContour) {
-            Quadrilateral mLargestRect = findQuadrilateral(largestContour);
+        List<MatOfPoint> sortedContours = getSortedContours(processedMat);
+        if (null != sortedContours) {
+            Quadrilateral mLargestRect = findQuadrilateral(sortedContours);
             if (mLargestRect != null)
                 return mLargestRect;
         }
         return null;
-    }
-
-    public static double getMaxCosine(double maxCosine, Point[] approxPoints) {
-        Log.i(TAG, "ANGLES ARE:");
-        for (int i = 2; i < 5; i++) {
-            double cosine = Math.abs(angle(approxPoints[i % 4], approxPoints[i - 2], approxPoints[i - 1]));
-            Log.i(TAG, String.valueOf(cosine));
-            maxCosine = Math.max(cosine, maxCosine);
-        }
-        return maxCosine;
-    }
-
-    private static double angle(Point p1, Point p2, Point p0) {
-        double dx1 = p1.x - p0.x;
-        double dy1 = p1.y - p0.y;
-        double dx2 = p2.x - p0.x;
-        double dy2 = p2.y - p0.y;
-        return (dx1 * dx2 + dy1 * dy2) / Math.sqrt((dx1 * dx1 + dy1 * dy1) * (dx2 * dx2 + dy2 * dy2) + 1e-10);
     }
 
     private static Point[] sortPoints(Point[] src) {
@@ -324,7 +171,7 @@ public class ScanUtils {
         Comparator<Point> sumComparator = new Comparator<Point>() {
             @Override
             public int compare(Point lhs, Point rhs) {
-                return Double.valueOf(lhs.y + lhs.x).compareTo(rhs.y + rhs.x);
+                return Double.compare(lhs.y + lhs.x,rhs.y + rhs.x);
             }
         };
 
@@ -332,7 +179,7 @@ public class ScanUtils {
 
             @Override
             public int compare(Point lhs, Point rhs) {
-                return Double.valueOf(lhs.y - lhs.x).compareTo(rhs.y - rhs.x);
+                return Double.compare(lhs.y - lhs.x, rhs.y - rhs.x);
             }
         };
 
@@ -348,24 +195,39 @@ public class ScanUtils {
         return result;
     }
 
-    private static List<MatOfPoint> findLargestContour(Mat inputMat) {
+    //    needed coz of the mess opencv-java has made:
+    private static MatOfPoint hull2Points(MatOfInt hull, MatOfPoint contour) {
+        List<Integer> indexes = hull.toList();
+        List<Point> points = new ArrayList<>();
+        MatOfPoint point= new MatOfPoint();
+        for(Integer index:indexes) {
+            points.add(contour.toList().get(index));
+        }
+        point.fromList(points);
+        return point;
+    }
+    private static List<MatOfPoint> getSortedContours(Mat inputMat) {
         Mat mHierarchy = new Mat();
         List<MatOfPoint> mContourList = new ArrayList<>();
-        //finding contours
-        Imgproc.findContours(inputMat, mContourList, mHierarchy, Imgproc.RETR_EXTERNAL,
-                Imgproc.CHAIN_APPROX_SIMPLE);
+        //finding contours - RETR_LIST is (faster, thus) better as we are sorting by area anyway
+        Imgproc.findContours(inputMat, mContourList, mHierarchy, Imgproc.RETR_LIST, Imgproc.CHAIN_APPROX_SIMPLE);
 
-        Mat mContoursMat = new Mat();
-        mContoursMat.create(inputMat.rows(), inputMat.cols(), CvType.CV_8U);
+        // convert contours to its convex hulls
+        List<MatOfPoint> mHullList = new ArrayList<>();
+        MatOfInt tempHullIndices = new MatOfInt();
+        for (int i = 0; i < mContourList.size(); i++) {
+            Imgproc.convexHull(mContourList.get(i), tempHullIndices);
+            mHullList.add(hull2Points(tempHullIndices, mContourList.get(i)));
+        }
 
-        if (mContourList.size() != 0) {
-            Collections.sort(mContourList, new Comparator<MatOfPoint>() {
+        if (mHullList.size() != 0) {
+            Collections.sort(mHullList, new Comparator<MatOfPoint>() {
                 @Override
                 public int compare(MatOfPoint lhs, MatOfPoint rhs) {
-                    return Double.valueOf(Imgproc.contourArea(rhs)).compareTo(Imgproc.contourArea(lhs));
+                    return Double.compare(Imgproc.contourArea(rhs),Imgproc.contourArea(lhs));
                 }
             });
-            return mContourList;
+            return mHullList;
         }
         return null;
     }
@@ -375,7 +237,7 @@ public class ScanUtils {
             MatOfPoint2f c2f = new MatOfPoint2f(c.toArray());
             double peri = Imgproc.arcLength(c2f, true);
             MatOfPoint2f approx = new MatOfPoint2f();
-            Imgproc.approxPolyDP(c2f, approx, 0.02 * peri, true);
+            Imgproc.approxPolyDP(c2f, approx, 0.025 * peri, true);
             Point[] points = approx.toArray();
             // select biggest 4 angles polygon
             if (approx.rows() == 4) {
@@ -430,81 +292,6 @@ public class ScanUtils {
         return output;
     }
 
-    public static String[] saveToInternalMemory(Bitmap bitmap, String mFileDirectory, String
-            mFileName, Context mContext, int mQuality) {
-        Log.d("custom"+TAG, "Save called");
-        String[] mReturnParams = new String[2];
-        Log.d("custom"+TAG, "Directory load: " + mFileDirectory+"/"+mFileName);
-        File mDirectory = getBaseDirectoryFromPathString(mFileDirectory, mContext);
-        Log.d("custom"+TAG, "File load");
-
-        File mPath = new File(mDirectory, mFileName);
-        try {
-            FileOutputStream mFileOutputStream = new FileOutputStream(mPath);
-            //Compress method used on the Bitmap object to write  image to output stream
-            bitmap.compress(Bitmap.CompressFormat.JPEG, mQuality, mFileOutputStream);
-            mFileOutputStream.close();
-        } catch (Exception e) {
-            Log.e("custom"+TAG, e.getMessage(), e);
-        }
-        mReturnParams[0] = mDirectory.getAbsolutePath();
-        mReturnParams[1] = mFileName;
-        return mReturnParams;
-    }
-
-    public static byte[] readBytes(String source) {
-        File file = new File(source);
-        int length = (int) file.length();
-        byte[] bytes = new byte[length];
-        FileInputStream in;
-        try {
-            in = new FileInputStream(file);
-            in.read(bytes);
-            in.close();
-        }
-        catch (FileNotFoundException e) {
-            Log.e("custom"+TAG, "File not found: " + e.toString());
-        }
-        catch (IOException e) {
-            Log.e("custom"+TAG, "File not readable: " + e.toString());
-        }
-        return bytes;
-    }
-    public static boolean writeBytes(byte[] bytes, String dest) {
-        File file = new File(dest);
-        FileOutputStream stream;
-        try {
-            stream = new FileOutputStream(file);
-            stream.write(bytes);
-            stream.close();
-        }
-        catch (FileNotFoundException e) {
-            Log.e("custom"+TAG, "File not found: " + e.toString());
-            return false;
-        }
-        catch (IOException e) {
-            Log.e("custom"+TAG, "File not readable: " + e.toString());
-            return false;
-        }
-
-        return true;
-    }
-    public static boolean copyFile(String source, String dest, Context context) {
-//        String data = readFromFile(source,context);
-//        return writeToFile(data,dest,context);
-
-        byte[] bytes = readBytes(source);
-        writeBytes(bytes, dest);
-        return true;
-    }
-
-    private static File getBaseDirectoryFromPathString(String mPath, Context mContext) {
-
-        ContextWrapper mContextWrapper = new ContextWrapper(mContext);
-
-        return mContextWrapper.getDir(mPath, Context.MODE_PRIVATE);
-    }
-
     public static Bitmap decodeBitmapFromFile(String path, String imageName) {
         // First decode with inJustDecodeBounds=true to check dimensions
         final BitmapFactory.Options options = new BitmapFactory.Options();
@@ -525,6 +312,23 @@ public class ScanUtils {
         return Math.round(px);
     }
 
+    public static double getMaxCosine(double maxCosine, Point[] approxPoints) {
+        Log.i(TAG, "ANGLES ARE:");
+        for (int i = 2; i < 5; i++) {
+            double cosine = Math.abs(angle(approxPoints[i % 4], approxPoints[i - 2], approxPoints[i - 1]));
+            Log.i(TAG, String.valueOf(cosine));
+            maxCosine = Math.max(cosine, maxCosine);
+        }
+        return maxCosine;
+    }
+
+    private static double angle(Point p1, Point p2, Point p0) {
+        double dx1 = p1.x - p0.x;
+        double dy1 = p1.y - p0.y;
+        double dx2 = p2.x - p0.x;
+        double dy2 = p2.y - p0.y;
+        return (dx1 * dx2 + dy1 * dy2) / Math.sqrt((dx1 * dx1 + dy1 * dy1) * (dx2 * dx2 + dy2 * dy2) + 1e-10);
+    }
 
     public static Bitmap decodeBitmapFromByteArray(byte[] data, int reqWidth, int reqHeight) {
         // Raw height and width of image
@@ -594,6 +398,16 @@ public class ScanUtils {
         }
 
         return inSampleSize;
+    }
+    public static Bitmap matToBitmap(Mat processedMat){
+        Bitmap cameraBitmap = Bitmap.createBitmap(processedMat.cols(), processedMat.rows(), Bitmap.Config.ARGB_8888);
+        Utils.matToBitmap(processedMat, cameraBitmap);
+        return cameraBitmap;
+    }
+    public static Bitmap rotateBitmap(Bitmap cameraBitmap, int degrees){
+        Matrix matrix = new Matrix();
+        matrix.postRotate(degrees);
+        return Bitmap.createBitmap(cameraBitmap, 0, 0, cameraBitmap.getWidth(), cameraBitmap.getHeight(), matrix, true);
     }
 
     public static Bitmap resize(Bitmap image, int maxWidth, int maxHeight) {

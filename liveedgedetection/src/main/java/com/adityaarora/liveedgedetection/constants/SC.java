@@ -7,7 +7,7 @@ import android.os.Environment;
  * This class defines constants
  */
 
-public class ScanConstants {
+public class SC {
     public static final String SCANNED_RESULT = "scannedResult";
     public static final String IMAGES_DIR = "OMRTechno/";
     public static final String IMAGE_NAME = "image";
@@ -19,6 +19,10 @@ public class ScanConstants {
 
 
     public static final int HIGHER_SAMPLING_THRESHOLD = 2200;
-    public static final int ACCEPT_TIMER = 2100;
+    public static final int ACCEPT_TIMER = 5000;
+    public static final int AUTOCAP_TIMER = 5000;
+    public static final int CANNY_THRESHOLD_L = 35;
+    public static final int CANNY_THRESHOLD_U = 135;
+    public static final int KSIZE_CLOSE = 10;
 
 }

@@ -10,9 +10,9 @@ import java.io.IOException;
 public class FileUtils {
     private static final String TAG = FileUtils.class.getSimpleName();
 
-    public static boolean saveImg(Bitmap bitmap, String folder, String name) {
+    public static boolean saveBitmap(Bitmap bitmap, String folder, String name) {
         // default args
-        return saveImg(bitmap, folder, name, 95);
+        return saveBitmap(bitmap, folder, name, 95);
     }
     private static File touchFile(String folderpath, String filename) throws IOException {
         File file = new File(folderpath,filename);
@@ -25,8 +25,8 @@ public class FileUtils {
             Log.d("custom"+TAG, "Making new directories for" + folderpath);
         folder.mkdirs();
     }
-    public static boolean saveImg(Bitmap bitmap, String folderpath, String filename, int mQuality) {
-        Log.d("custom"+TAG, "saveImg: Saving image: " + folderpath+filename);
+    public static boolean saveBitmap(Bitmap bitmap, String folderpath, String filename, int mQuality) {
+        Log.d("custom"+TAG, "saveBitmap: Saving image: " + folderpath+filename);
 
         try {
             checkMakeDirs(folderpath);

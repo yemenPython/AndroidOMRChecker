@@ -2,7 +2,6 @@ package com.adityaarora.liveedgedetection.activity;
 
 import android.Manifest;
 import android.app.Activity;
-import android.app.FragmentManager;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
@@ -19,18 +18,19 @@ import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.transition.TransitionManager;
 import android.util.Log;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.widget.CompoundButton;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ToggleButton;
 
 import com.adityaarora.liveedgedetection.R;
-import com.adityaarora.liveedgedetection.constants.ScanConstants;
+import com.adityaarora.liveedgedetection.constants.SC;
 import com.adityaarora.liveedgedetection.enums.ScanHint;
 import com.adityaarora.liveedgedetection.interfaces.IScanner;
 import com.adityaarora.liveedgedetection.util.FileUtils;
@@ -47,9 +47,8 @@ import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.imgproc.Imgproc;
 
-import java.io.File;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Stack;
 
@@ -71,12 +70,13 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
 
     private ViewGroup containerScan;
     private FrameLayout cameraPreviewLayout;
+    private FrameLayout effectsPreviewLayout;
     private ScanSurfaceView mImageSurfaceView;
     
     private static final String mOpenCvLibrary = "opencv_java3";
     private static ProgressDialogFragment progressDialogFragment;
     private TextView captureHintText;
-    private TextView timeElapsedView;
+    private TextView timeElapsedText;
     private LinearLayout captureHintLayout;
 
     public final static Stack<PolygonPoints> allDraggedPointsStack = new Stack<>();
@@ -99,15 +99,16 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
         // outermost view = containerScan
         containerScan = findViewById(R.id.container_scan);
         cameraPreviewLayout = findViewById(R.id.camera_preview);
-        captureHintLayout = findViewById(R.id.capture_hint_layout);
-        timeElapsedView = findViewById(R.id.time_elapsed_text);
-        captureHintText = findViewById(R.id.capture_hint_text);
+
         cropImageView = findViewById(R.id.crop_image_view);
+        captureHintLayout = findViewById(R.id.capture_hint_layout);
+        timeElapsedText = findViewById(R.id.time_elapsed_text);
+        captureHintText = findViewById(R.id.capture_hint_text);
+
+        // Contains the accept/reject buttons -
+        cropLayout = findViewById(R.id.crop_layout);
         cropAcceptBtn = findViewById(R.id.crop_accept_btn);
         cropRejectBtn = findViewById(R.id.crop_reject_btn);
-        cropLayout = findViewById(R.id.crop_layout);
-        ScanConstants.APPDATA_FOLDER = ScanActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/" + ScanConstants.IMAGES_DIR;
-
         cropAcceptBtn.setOnClickListener(this);
         cropRejectBtn.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -115,6 +116,23 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
                 resumePreview();
             }
         });
+
+        List <Integer> toggleButtons = new ArrayList<>();
+        toggleButtons.add(R.id.xray_btn);
+        toggleButtons.add(R.id.canny_btn);
+        toggleButtons.add(R.id.morph_btn);
+        toggleButtons.add(R.id.thresh_btn);
+
+        for(int id : toggleButtons){
+            ToggleButton button = findViewById(id);
+            final int key = id;
+            button.setOnCheckedChangeListener(new ToggleButton.OnCheckedChangeListener(){
+                @Override
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked){ mImageSurfaceView.buttonChecked.put(key ,isChecked);}
+            });
+        }
+
+        SC.APPDATA_FOLDER = ScanActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/" + SC.IMAGES_DIR;
         checkStoragePermissions();
         checkCameraPermissions();
     }
@@ -136,6 +154,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
         } else {
             if (!isCameraPermissionNotGranted) {
                 mImageSurfaceView = new ScanSurfaceView(ScanActivity.this, this);
+                // add child view
                 cameraPreviewLayout.addView(mImageSurfaceView);
             } else {
                 isCameraPermissionNotGranted = false;
@@ -160,8 +179,8 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
         } else {
             if (!isStoragePermissionNotGranted) {
                 // create intermediate directories
-                FileUtils.checkMakeDirs(ScanConstants.APPDATA_FOLDER);
-                FileUtils.checkMakeDirs(ScanConstants.STORAGE_FOLDER);
+                FileUtils.checkMakeDirs(SC.APPDATA_FOLDER);
+                FileUtils.checkMakeDirs(SC.STORAGE_FOLDER);
             } else {
                 isStoragePermissionNotGranted = false;
             }
@@ -247,7 +266,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
             Utils.bitmapToMat(copyBitmap, originalMat);
             ArrayList<PointF> points;
             try {
-                Quadrilateral quad = ScanUtils.detectLargestQuadrilateral(originalMat);
+                Quadrilateral quad = ScanUtils.findPage(originalMat);
                 if (null != quad) {
                     double resultArea = Math.abs(Imgproc.contourArea(quad.contour));
                     double previewArea = originalMat.rows() * originalMat.cols();
@@ -269,14 +288,9 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
                     TransitionManager.beginDelayedTransition(containerScan);
 
-//TODO                call template matching here-
-//TODO                draw marker bounds on copyBitmap here-
-
-
-                // Contains the accept/reject buttons -
-                cropLayout.setVisibility(View.VISIBLE);
                 cropImageView.setImageBitmap(copyBitmap);
                 cropImageView.setScaleType(ImageView.ScaleType.FIT_XY);
+                cropLayout.setVisibility(View.VISIBLE);
 
                 startAcceptCountDown();
             } catch (Exception e) {
@@ -307,13 +321,13 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
     }
 
     public void startAcceptCountDown(){
-        new CountDownTimer(ScanConstants.ACCEPT_TIMER, 1000) {
+        new CountDownTimer(SC.ACCEPT_TIMER, 1000) {
             public void onTick(long millisUntilFinished) {
-                timeElapsedView.setText( res.getString(R.string.timer_text,millisUntilFinished / 1000));
+                timeElapsedText.setText( res.getString(R.string.timer_text,millisUntilFinished / 1000));
             }
 
             public void onFinish() {
-                timeElapsedView.setText( res.getString(R.string.timer_text,0));
+                timeElapsedText.setText( res.getString(R.string.timer_text,0));
                 cropAcceptBtn.performClick();
             }
         }.start();
@@ -335,9 +349,10 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
         } else {
             croppedBitmap = copyBitmap;
         }
-        String path = ScanConstants.APPDATA_FOLDER;
-        boolean success = FileUtils.saveImg(croppedBitmap, path, ScanConstants.IMAGE_NAME);
-        setResult(Activity.RESULT_OK, new Intent().putExtra(ScanConstants.SCANNED_RESULT, path));
+        String path = SC.STORAGE_FOLDER;
+        Toast.makeText(this, "Saving image: " + path+SC.IMAGE_NAME, Toast.LENGTH_SHORT).show();
+        boolean success = FileUtils.saveBitmap(croppedBitmap, path, SC.IMAGE_NAME);
+        setResult(Activity.RESULT_OK, new Intent().putExtra(SC.SCANNED_RESULT, path));
         Log.d("custom"+TAG, "Resuming.");
 
         resumePreview();

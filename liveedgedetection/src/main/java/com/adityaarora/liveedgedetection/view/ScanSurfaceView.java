@@ -14,17 +14,18 @@ import android.graphics.drawable.shapes.PathShape;
 import android.hardware.Camera;
 import android.media.AudioManager;
 import android.os.CountDownTimer;
-import android.os.Environment;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.widget.FrameLayout;
+import android.widget.Toast;
 
 
 import com.adityaarora.liveedgedetection.R;
-import com.adityaarora.liveedgedetection.constants.ScanConstants;
+import com.adityaarora.liveedgedetection.constants.SC;
 import com.adityaarora.liveedgedetection.enums.ScanHint;
 import com.adityaarora.liveedgedetection.interfaces.IScanner;
+import com.adityaarora.liveedgedetection.util.FileUtils;
 import com.adityaarora.liveedgedetection.util.ImageDetectionProperties;
 import com.adityaarora.liveedgedetection.util.ScanUtils;
 
@@ -33,11 +34,14 @@ import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Size;
+import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.opencv.core.CvType.CV_8UC1;
 
@@ -61,8 +65,8 @@ public class ScanSurfaceView extends FrameLayout implements SurfaceHolder.Callba
     private boolean isAutoCaptureScheduled;
     private Camera.Size previewSize;
     private boolean isCapturing = false;
-
-
+    public Map<Integer, Boolean> buttonChecked = new HashMap<>();
+    private Mat markerToMatch;
 
     public ScanSurfaceView(Context context, IScanner iScanner) {
         super(context);
@@ -70,26 +74,12 @@ public class ScanSurfaceView extends FrameLayout implements SurfaceHolder.Callba
         addView(mSurfaceView);
         this.context = context;
 
-        //    Android/data/appname  --> context.getFilesDir or getExternalFilesDir (Any files that are private to the application)
-        //    emulated/0/Downloads --> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-        // another source:  Environment.getExternalStorageDirectory().getAbsolutePath() + "/Downloads"
+        Log.d("custom"+TAG,"STORAGE_FOLDER: "+ SC.STORAGE_FOLDER);
+        Log.d("custom"+TAG,"APPDATA_FOLDER: "+ SC.APPDATA_FOLDER);
+        Log.d("custom"+TAG,"Marker PATH: "+ SC.STORAGE_FOLDER+ SC.MARKER_NAME);
 
-        Log.d("custom"+TAG,"STORAGE_FOLDER: "+ScanConstants.STORAGE_FOLDER);
-        Log.d("custom"+TAG,"APPDATA_FOLDER: "+ScanConstants.APPDATA_FOLDER);
-        Log.d("custom"+TAG,"Marker PATH: "+ScanConstants.STORAGE_FOLDER+ ScanConstants.MARKER_NAME);
+        markerToMatch = getOrMakeMarker();
 
-        File mFile = new File (ScanConstants.STORAGE_FOLDER, ScanConstants.MARKER_NAME);
-        if(! mFile.exists()){
-            Bitmap bm = BitmapFactory.decodeResource( getResources(), R.drawable.default_omr_marker);
-            boolean done = ScanUtils.saveImg(bm,ScanConstants.STORAGE_FOLDER,ScanConstants.MARKER_NAME);
-            if(done)
-                Log.d("custom"+TAG,"Marker copied successfully to storage folder.");
-            else
-                Log.d("custom"+TAG,"Error copying Marker to storage folder.");
-        }
-        else{
-            Log.d("custom"+TAG,"Marker found in storage folder");
-        }
         this.scanCanvasView = new ScanCanvasView(context);
         addView(scanCanvasView);
         SurfaceHolder surfaceHolder = mSurfaceView.getHolder();
@@ -97,7 +87,28 @@ public class ScanSurfaceView extends FrameLayout implements SurfaceHolder.Callba
         this.iScanner = iScanner;
     }
 
-    @Override
+    private Mat getOrMakeMarker() {
+        File mFile = new File (SC.STORAGE_FOLDER, SC.MARKER_NAME);
+        if(! mFile.exists()){
+            Bitmap bm = BitmapFactory.decodeResource( getResources(), R.drawable.default_omr_marker);
+            boolean success = FileUtils.saveBitmap(bm, SC.STORAGE_FOLDER, SC.MARKER_NAME);
+            if(success) {
+                Log.d("custom" + TAG, "Marker copied successfully to storage folder.");
+                Toast.makeText(context, "Marker copied successfully to: " + SC.STORAGE_FOLDER, Toast.LENGTH_SHORT).show();
+            }
+            else
+                Log.d("custom"+TAG,"Error copying Marker to storage folder.");
+        }
+        else{
+            Log.d("custom"+TAG,"Marker found in storage folder");
+        }
+
+        Mat marker = Imgcodecs.imread(mFile.getAbsolutePath());
+        Log.d("custom"+TAG,"Marker dims: "+marker.rows()+","+marker.cols());
+
+        return marker;
+    }
+
     public void surfaceCreated(SurfaceHolder holder) {
         try {
             requestLayout();
@@ -140,6 +151,7 @@ public class ScanSurfaceView extends FrameLayout implements SurfaceHolder.Callba
         }
     }
 
+    //    SurfaceView
     @Override
     public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
         if (vWidth == vHeight) {
@@ -191,48 +203,88 @@ public class ScanSurfaceView extends FrameLayout implements SurfaceHolder.Callba
         this.camera.setPreviewCallback(previewCallback);
     }
 
+
+    public Mat byteArrayToMat(byte[] data, Camera.Size pictureSize){
+        Mat yuv = new Mat(new Size(pictureSize.width, pictureSize.height * 1.5), CV_8UC1);
+        yuv.put(0, 0, data);
+        Mat mat = new Mat(new Size(pictureSize.width, pictureSize.height), CvType.CV_8UC4);
+        Imgproc.cvtColor(yuv, mat, Imgproc.COLOR_YUV2BGR_NV21, 4);
+        yuv.release();
+        return mat;
+    }
+
+    public Mat preProcessMat(Mat mat){
+        Mat processedMat = new Mat(mat.rows(), mat.cols(), CV_8UC1);
+        Imgproc.cvtColor(mat, processedMat, Imgproc.COLOR_BGR2GRAY, 4);
+        Imgproc.blur(processedMat, processedMat, new Size(3, 3));
+//        TODO do normalization here.
+        return processedMat;
+    }
+//    This is the "LIVE" function, the heart of this app.
     private final Camera.PreviewCallback previewCallback = new Camera.PreviewCallback() {
         @Override
         public void onPreviewFrame(byte[] data, Camera camera) {
             if (null != camera) {
-                try {
-                    // CALLBACK FOR HANDLING IMAGES
-                    Camera.Size pictureSize = camera.getParameters().getPreviewSize();
+                // CALLBACK FOR HANDLING IMAGES
+                Camera.Size pictureSize = camera.getParameters().getPreviewSize();
 //                    Log.d(TAG, "onPreviewFrame - received image " + pictureSize.width + "x" + pictureSize.height);
 
-                    Mat yuv = new Mat(new Size(pictureSize.width, pictureSize.height * 1.5), CV_8UC1);
-                    yuv.put(0, 0, data);
+//                        data contains the image as byte[] in YUV color scheme
+                Mat mat = byteArrayToMat(data, pictureSize);
+                Mat processedMat = preProcessMat(mat);
+                mat.release();
 
-                    Mat mat = new Mat(new Size(pictureSize.width, pictureSize.height), CvType.CV_8UC4);
-                    Imgproc.cvtColor(yuv, mat, Imgproc.COLOR_YUV2BGR_NV21, 4);
-                    yuv.release();
+                if (!getOrDefault(buttonChecked, R.id.xray_btn,false)) {
+                    scanCanvasView.unsetCameraBitmap();
+                    try {
+                        Size originalPreviewSize = processedMat.size();
+                        int originalPreviewArea = processedMat.rows() * processedMat.cols();
+                        Quadrilateral largestQuad = ScanUtils.findPage(processedMat);
 
-                    Size originalPreviewSize = mat.size();
-                    int originalPreviewArea = mat.rows() * mat.cols();
+                        clearAndInvalidateCanvas();
+                        processedMat.release();
 
-                    Quadrilateral largestQuad = ScanUtils.detectLargestQuadrilateral(mat);
-//                    Quadrilateral largestQuad = ScanUtils.detectLargestQuadrilateral(marker, mat);
-                    clearAndInvalidateCanvas();
+                        if (null != largestQuad) {
+                            drawLargestRect(largestQuad.contour, largestQuad.points, originalPreviewSize, originalPreviewArea);
+                            //TODO                    call template match here. then call draw marker boxes
+                        } else {
+                            showFindingReceiptHint();
+                        }
 
-                    mat.release();
-
-                    if (null != largestQuad) {
-                        drawLargestRect(largestQuad.contour, largestQuad.points, originalPreviewSize, originalPreviewArea);
-                    } else {
+                    } catch (Exception e) {
+                        Log.d(TAG, "Uh oh.. Camera error?");
                         showFindingReceiptHint();
                     }
+                }
+                else{
+//                    TODO : Can apply more live filters here:
+                    iScanner.displayHint(ScanHint.NO_MESSAGE);
+                    // set to render frame again
+                    clearAndInvalidateCanvas();
+                    if(getOrDefault(buttonChecked, R.id.canny_btn,false))
+                        ScanUtils.canny(processedMat);
+                    if(getOrDefault(buttonChecked, R.id.morph_btn,false))
+                        ScanUtils.morph(processedMat);
+                    if(getOrDefault(buttonChecked, R.id.thresh_btn,false))
+                        ScanUtils.thresh(processedMat);
 
-                } catch (Exception e) {
-                    Log.d(TAG, "Uh oh.. Camera error?");
-                    showFindingReceiptHint();
+                    // rotate the bitmap for portrait
+                    Bitmap cameraBitmap = ScanUtils.matToBitmap(processedMat);
+                    cameraBitmap = ScanUtils.rotateBitmap(cameraBitmap, 90);
+                    scanCanvasView.setCameraBitmap(cameraBitmap);
                 }
             }
         }
     };
-
+    private Boolean getOrDefault(Map<Integer,Boolean> map, Integer k, Boolean v){
+        if(map.containsKey(k))
+            return map.get(k);
+        else
+            return v;
+    }
     private void drawLargestRect(MatOfPoint2f approx, Point[] points, Size stdSize, int previewArea) {
         Path path = new Path();
-        // ATTENTION: axis are swapped
+        // ATTENTION: axes are swapped
         float previewWidth = (float) stdSize.height;
         float previewHeight = (float) stdSize.width;
 
@@ -326,7 +378,7 @@ public class ScanSurfaceView extends FrameLayout implements SurfaceHolder.Callba
     private void scheduleAutoCapture(final ScanHint scanHint) {
         isAutoCaptureScheduled = true;
         secondsLeft = 0;
-        autoCaptureTimer = new CountDownTimer(2000, 100) {
+        autoCaptureTimer = new CountDownTimer( SC.AUTOCAP_TIMER, 500) {
             public void onTick(long millisUntilFinished) {
                 if (Math.round((float) millisUntilFinished / 1000.0f) != secondsLeft) {
                     secondsLeft = Math.round((float) millisUntilFinished / 1000.0f);
@@ -412,7 +464,7 @@ public class ScanSurfaceView extends FrameLayout implements SurfaceHolder.Callba
             clearAndInvalidateCanvas();
 
             Bitmap bitmap = ScanUtils.decodeBitmapFromByteArray(data,
-                    ScanConstants.HIGHER_SAMPLING_THRESHOLD, ScanConstants.HIGHER_SAMPLING_THRESHOLD);
+                    SC.HIGHER_SAMPLING_THRESHOLD, SC.HIGHER_SAMPLING_THRESHOLD);
 
             Matrix matrix = new Matrix();
             matrix.postRotate(90);

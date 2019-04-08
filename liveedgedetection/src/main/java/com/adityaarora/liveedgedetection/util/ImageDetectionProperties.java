@@ -1,5 +1,7 @@
 package com.adityaarora.liveedgedetection.util;
 
+import android.util.Log;
+
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 
@@ -17,7 +19,9 @@ public class ImageDetectionProperties {
     private final Point topRightPoint;
     private final double previewArea;
     private final double resultArea;
-
+    private final double EDGE_MARGIN_FAC = 0.07;
+    private final int EDGE_MARGIN_HZ;
+    private final int EDGE_MARGIN_VT;
     public ImageDetectionProperties(double previewWidth, double previewHeight, double resultWidth,
                                     double resultHeight, double previewArea, double resultArea,
                                     Point topLeftPoint, Point bottomLeftPoint, Point bottomRightPoint,
@@ -32,6 +36,8 @@ public class ImageDetectionProperties {
         this.bottomRightPoint   = bottomRightPoint;
         this.topLeftPoint       = topLeftPoint;
         this.topRightPoint      = topRightPoint;
+        this.EDGE_MARGIN_HZ = (int)(previewWidth * EDGE_MARGIN_FAC);
+        this.EDGE_MARGIN_VT = (int)(previewHeight * EDGE_MARGIN_FAC);
     }
 
     public boolean isDetectedAreaBeyondLimits() {
@@ -46,28 +52,12 @@ public class ImageDetectionProperties {
         return resultHeight / previewHeight > 0.9;
     }
 
-    public boolean isDetectedHeightAboveNinetySeven() {
-        return resultHeight / previewHeight > 0.97;
-    }
-
-    public boolean isDetectedHeightAboveEightyFive() {
-        return resultHeight / previewHeight > 0.85;
-    }
-
     public boolean isDetectedAreaAboveLimit() {
         return resultArea > previewArea * 0.75;
     }
 
-    public boolean isDetectedImageDisProportionate() {
-        return resultHeight / resultWidth > 4;
-    }
-
     public boolean isDetectedAreaBelowLimits() {
         return resultArea < previewArea * 0.25;
-    }
-
-    public boolean isDetectedAreaBelowRatioCheck() {
-        return resultArea < previewArea * 0.35;
     }
 
     public boolean isAngleNotCorrect(MatOfPoint2f approx) {
@@ -86,46 +76,27 @@ public class ImageDetectionProperties {
         double maxCosine = 0;
         Point[] approxPoints = approx.toArray();
         maxCosine = ScanUtils.getMaxCosine(maxCosine, approxPoints);
-        return maxCosine >= 0.085; //(smallest angle is below 87 deg)
+//        return maxCosine >= 0.085; //(smallest angle is below 87 deg)
+        return maxCosine >= 0.35; //(smallest angle is below 87 deg)
     }
 
     public boolean isEdgeTouching() {
         return isTopEdgeTouching() || isBottomEdgeTouching() || isLeftEdgeTouching() || isRightEdgeTouching();
     }
 
-    public boolean isReceiptToughingSides() {
-        return isLeftEdgeTouching() || isRightEdgeTouching();
-    }
-
-    public boolean isReceiptTouchingTopOrBottom() {
-        return isTopEdgeTouching() || isBottomEdgeTouching();
-    }
-
-    public boolean isReceiptTouchingTopAndBottom() {
-        return isTopEdgeTouchingProper() && isBottomEdgeTouchingProper();
-    }
-
-    private boolean isBottomEdgeTouchingProper() {
-        return (bottomLeftPoint.x >= previewHeight - 10 || bottomRightPoint.x >= previewHeight - 10);
-    }
-
-    private boolean isTopEdgeTouchingProper() {
-        return (topLeftPoint.x <= 10 || topRightPoint.x <= 10);
-    }
-
     private boolean isBottomEdgeTouching() {
-        return (bottomLeftPoint.x >= previewHeight - 50 || bottomRightPoint.x >= previewHeight - 50);
+        return (bottomLeftPoint.x >= previewHeight - EDGE_MARGIN_VT || bottomRightPoint.x >= previewHeight - EDGE_MARGIN_VT);
     }
 
     private boolean isTopEdgeTouching() {
-        return (topLeftPoint.x <= 50 || topRightPoint.x <= 50);
+        return (topLeftPoint.x <= EDGE_MARGIN_VT || topRightPoint.x <= EDGE_MARGIN_VT);
     }
 
     private boolean isRightEdgeTouching() {
-        return (topRightPoint.y >= previewWidth - 50 || bottomRightPoint.y >= previewWidth - 50);
+        return (topRightPoint.y >= previewWidth - EDGE_MARGIN_HZ || bottomRightPoint.y >= previewWidth - EDGE_MARGIN_HZ);
     }
 
     private boolean isLeftEdgeTouching() {
-        return (topLeftPoint.y <= 50 || bottomLeftPoint.y <= 50);
+        return (topLeftPoint.y <= EDGE_MARGIN_HZ || bottomLeftPoint.y <= EDGE_MARGIN_HZ);
     }
 }

@@ -12,6 +12,40 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- Debug Button: effects preview -->
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top|center"
+        android:layout_marginBottom="20dp"
+        android:gravity="center">
+
+    <ToggleButton
+        android:id="@+id/xray_btn"
+        android:textOn="@string/xray"
+        android:textOff="@string/normal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    <ToggleButton
+        android:id="@+id/canny_btn"
+        android:textOn="@string/canny_on"
+        android:textOff="@string/canny_off"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    <ToggleButton
+        android:id="@+id/morph_btn"
+        android:textOn="@string/morph_on"
+        android:textOff="@string/morph_off"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    <ToggleButton
+        android:id="@+id/thresh_btn"
+        android:textOn="@string/thresh_on"
+        android:textOff="@string/thresh_off"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content" />
+    </LinearLayout>
     <!-- Second (Hidden) layer: crop layout-->
     <FrameLayout
         android:id="@+id/crop_layout"
@@ -62,7 +96,7 @@
                     android:paddingLeft="12dp"
                     android:paddingRight="12dp"
                     android:text="@string/finding_rect"
-                    android:textColor="@color/white"
+                    android:textColor="@color/orange"
                     android:textSize="@dimen/text_size_18" />
 
             <View
