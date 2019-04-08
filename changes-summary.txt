@@ -1,0 +1,15 @@
+TODO
+UI changes -
+    // No need of dragging of points
+    // Preview shall not pause and show enhanced crop.
+    // cropLayout be visible for 2 seconds : if X is clicked, image is not saved.
+    // Implement and Display timer
+    change to showing circles instead of page outline / do both
+    Name of saving Folder be shown above preview screen
+    cancel button should show right when "hold still" is displayed. Picture be saved via a thread to save time (overwrite if ctr not incremented).
+
+Code-only changes -
+    Debug findLargestContour dont work on light backgrounds
+        -> Make a debug view to see intermediate bitmaps!
+    // change onPictureClicked
+    add matchTemplate

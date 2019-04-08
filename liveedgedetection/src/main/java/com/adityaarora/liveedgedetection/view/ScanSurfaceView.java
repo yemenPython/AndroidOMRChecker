@@ -74,9 +74,8 @@ public class ScanSurfaceView extends FrameLayout implements SurfaceHolder.Callba
         //    emulated/0/Downloads --> Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
         // another source:  Environment.getExternalStorageDirectory().getAbsolutePath() + "/Downloads"
 
-        String APPDATA_FOLDER = context.getExternalFilesDir(null).getAbsolutePath()+"/";
         Log.d("custom"+TAG,"STORAGE_FOLDER: "+ScanConstants.STORAGE_FOLDER);
-        Log.d("custom"+TAG,"APPDATA_FOLDER: "+APPDATA_FOLDER);
+        Log.d("custom"+TAG,"APPDATA_FOLDER: "+ScanConstants.APPDATA_FOLDER);
         Log.d("custom"+TAG,"Marker PATH: "+ScanConstants.STORAGE_FOLDER+ ScanConstants.MARKER_NAME);
 
         File mFile = new File (ScanConstants.STORAGE_FOLDER, ScanConstants.MARKER_NAME);
@@ -199,7 +198,7 @@ public class ScanSurfaceView extends FrameLayout implements SurfaceHolder.Callba
                 try {
                     // CALLBACK FOR HANDLING IMAGES
                     Camera.Size pictureSize = camera.getParameters().getPreviewSize();
-                    Log.d(TAG, "onPreviewFrame - received image " + pictureSize.width + "x" + pictureSize.height);
+//                    Log.d(TAG, "onPreviewFrame - received image " + pictureSize.width + "x" + pictureSize.height);
 
                     Mat yuv = new Mat(new Size(pictureSize.width, pictureSize.height * 1.5), CV_8UC1);
                     yuv.put(0, 0, data);
@@ -216,15 +215,8 @@ public class ScanSurfaceView extends FrameLayout implements SurfaceHolder.Callba
                     clearAndInvalidateCanvas();
 
                     mat.release();
-                    //TODO Rough
-                    // import Finalcircle.jpg
-                    // Find where to put template matching code
-                    // change to showing circles instead of page outline / do both
-                    //
-                    // cancel button should show right when "hold still" is displayed. Picture be saved via a thread to save time (overwrite if ctr not incremented).
-                    //
+
                     if (null != largestQuad) {
-                        Log.d(TAG, "drawLargestRect called ");
                         drawLargestRect(largestQuad.contour, largestQuad.points, originalPreviewSize, originalPreviewArea);
                     } else {
                         showFindingReceiptHint();

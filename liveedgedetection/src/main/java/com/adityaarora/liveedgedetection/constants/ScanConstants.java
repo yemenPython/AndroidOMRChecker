@@ -14,7 +14,11 @@ public class ScanConstants {
     public static final String MARKER_NAME = "omr_marker.jpg";
 //    This one doesn't need context
     public static final String STORAGE_FOLDER=  Environment.getExternalStorageDirectory().getAbsolutePath() +"/" + IMAGES_DIR;
+//    this needs string
+    public static String APPDATA_FOLDER;
+
 
     public static final int HIGHER_SAMPLING_THRESHOLD = 2200;
+    public static final int ACCEPT_TIMER = 2100;
 
 }

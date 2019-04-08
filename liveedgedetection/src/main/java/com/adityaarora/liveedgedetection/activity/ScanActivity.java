@@ -6,10 +6,12 @@ import android.app.FragmentManager;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
+import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.PointF;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
@@ -31,6 +33,7 @@ import com.adityaarora.liveedgedetection.R;
 import com.adityaarora.liveedgedetection.constants.ScanConstants;
 import com.adityaarora.liveedgedetection.enums.ScanHint;
 import com.adityaarora.liveedgedetection.interfaces.IScanner;
+import com.adityaarora.liveedgedetection.util.FileUtils;
 import com.adityaarora.liveedgedetection.util.ScanUtils;
 import com.adityaarora.liveedgedetection.view.PolygonPoints;
 import com.adityaarora.liveedgedetection.view.PolygonView;
@@ -64,7 +67,8 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
 
     private boolean isCameraPermissionNotGranted;
     private boolean isStoragePermissionNotGranted;
-    
+    private  Map<Integer, PointF>  scannedPoints;
+
     private ViewGroup containerScan;
     private FrameLayout cameraPreviewLayout;
     private ScanSurfaceView mImageSurfaceView;
@@ -72,16 +76,16 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
     private static final String mOpenCvLibrary = "opencv_java3";
     private static ProgressDialogFragment progressDialogFragment;
     private TextView captureHintText;
+    private TextView timeElapsedView;
     private LinearLayout captureHintLayout;
 
     public final static Stack<PolygonPoints> allDraggedPointsStack = new Stack<>();
-    private PolygonView polygonView;
     private ImageView cropImageView;
     private View cropAcceptBtn;
     private View cropRejectBtn;
     private Bitmap copyBitmap;
     private FrameLayout cropLayout;
-
+    private Resources res;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -91,24 +95,24 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
     }
 
     private void init() {
+        res = getResources();
+        // outermost view = containerScan
         containerScan = findViewById(R.id.container_scan);
         cameraPreviewLayout = findViewById(R.id.camera_preview);
         captureHintLayout = findViewById(R.id.capture_hint_layout);
+        timeElapsedView = findViewById(R.id.time_elapsed_text);
         captureHintText = findViewById(R.id.capture_hint_text);
-        polygonView = findViewById(R.id.polygon_view);
         cropImageView = findViewById(R.id.crop_image_view);
         cropAcceptBtn = findViewById(R.id.crop_accept_btn);
         cropRejectBtn = findViewById(R.id.crop_reject_btn);
         cropLayout = findViewById(R.id.crop_layout);
+        ScanConstants.APPDATA_FOLDER = ScanActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/" + ScanConstants.IMAGES_DIR;
 
         cropAcceptBtn.setOnClickListener(this);
         cropRejectBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
-                    TransitionManager.beginDelayedTransition(containerScan);
-                cropLayout.setVisibility(View.GONE);
-                mImageSurfaceView.setPreviewCallback();
+                resumePreview();
             }
         });
         checkStoragePermissions();
@@ -156,9 +160,8 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
         } else {
             if (!isStoragePermissionNotGranted) {
                 // create intermediate directories
-                Log.d("custom"+TAG,"(First permission grant) Creating directories...");
-                File mFile = new File (ScanConstants.STORAGE_FOLDER);
-                mFile.mkdirs();
+                FileUtils.checkMakeDirs(ScanConstants.APPDATA_FOLDER);
+                FileUtils.checkMakeDirs(ScanConstants.STORAGE_FOLDER);
             } else {
                 isStoragePermissionNotGranted = false;
             }
@@ -200,29 +203,28 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
     }
 
     @Override
-    public void displayHint
-            (ScanHint scanHint) {
+    public void displayHint (ScanHint scanHint) {
         captureHintLayout.setVisibility(View.VISIBLE);
         switch (scanHint) {
             case MOVE_CLOSER:
-                captureHintText.setText(getResources().getString(R.string.move_closer));
-                captureHintLayout.setBackground(getResources().getDrawable(R.drawable.hint_red));
+                captureHintText.setText(res.getString(R.string.move_closer));
+                captureHintLayout.setBackground(res.getDrawable(R.drawable.hint_red));
                 break;
             case MOVE_AWAY:
-                captureHintText.setText(getResources().getString(R.string.move_away));
-                captureHintLayout.setBackground(getResources().getDrawable(R.drawable.hint_red));
+                captureHintText.setText(res.getString(R.string.move_away));
+                captureHintLayout.setBackground(res.getDrawable(R.drawable.hint_red));
                 break;
             case ADJUST_ANGLE:
-                captureHintText.setText(getResources().getString(R.string.adjust_angle));
-                captureHintLayout.setBackground(getResources().getDrawable(R.drawable.hint_red));
+                captureHintText.setText(res.getString(R.string.adjust_angle));
+                captureHintLayout.setBackground(res.getDrawable(R.drawable.hint_red));
                 break;
             case FIND_RECT:
-                captureHintText.setText(getResources().getString(R.string.finding_rect));
-                captureHintLayout.setBackground(getResources().getDrawable(R.drawable.hint_white));
+                captureHintText.setText(res.getString(R.string.finding_rect));
+                captureHintLayout.setBackground(res.getDrawable(R.drawable.hint_white));
                 break;
             case CAPTURING_IMAGE:
-                captureHintText.setText(getResources().getString(R.string.hold_still));
-                captureHintLayout.setBackground(getResources().getDrawable(R.drawable.hint_green));
+                captureHintText.setText(res.getString(R.string.hold_still));
+                captureHintLayout.setBackground(res.getDrawable(R.drawable.hint_green));
                 break;
             case NO_MESSAGE:
                 captureHintLayout.setVisibility(GONE);
@@ -244,7 +246,6 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
             Mat originalMat = new Mat(copyBitmap.getHeight(), copyBitmap.getWidth(), CvType.CV_8UC1);
             Utils.bitmapToMat(copyBitmap, originalMat);
             ArrayList<PointF> points;
-            Map<Integer, PointF> pointFs = new HashMap<>();
             try {
                 Quadrilateral quad = ScanUtils.detectLargestQuadrilateral(originalMat);
                 if (null != quad) {
@@ -264,22 +265,20 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
                     points = ScanUtils.getPolygonDefaultPoints(copyBitmap);
                 }
 
-                int index = -1;
-                for (PointF pointF : points) {
-                    pointFs.put(++index, pointF);
-                }
-
-                polygonView.setPoints(pointFs);
-                int padding = (int) getResources().getDimension(R.dimen.scan_padding);
-                FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(copyBitmap.getWidth() + 2 * padding, copyBitmap.getHeight() + 2 * padding);
-                layoutParams.gravity = Gravity.CENTER;
-                polygonView.setLayoutParams(layoutParams);
+                scannedPoints = PolygonView.getOrderedPoints(points);
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
                     TransitionManager.beginDelayedTransition(containerScan);
-                cropLayout.setVisibility(View.VISIBLE);
 
+//TODO                call template matching here-
+//TODO                draw marker bounds on copyBitmap here-
+
+
+                // Contains the accept/reject buttons -
+                cropLayout.setVisibility(View.VISIBLE);
                 cropImageView.setImageBitmap(copyBitmap);
                 cropImageView.setScaleType(ImageView.ScaleType.FIT_XY);
+
+                startAcceptCountDown();
             } catch (Exception e) {
                 Log.e(TAG, e.getMessage(), e);
             }
@@ -287,30 +286,44 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
             Log.e(TAG, e.getMessage(), e);
         }
     }
-
-    private synchronized void showProgressDialog(String message) {
-        if (progressDialogFragment != null && progressDialogFragment.isVisible()) {
-            // Before creating another loading dialog, close all opened loading dialogs (if any)
-            progressDialogFragment.dismissAllowingStateLoss();
-        }
-        progressDialogFragment = null;
-        progressDialogFragment = new ProgressDialogFragment(message);
-        FragmentManager fm = getFragmentManager();
-        progressDialogFragment.show(fm, ProgressDialogFragment.class.toString());
-    }
-
-    private synchronized void dismissDialog() {
-        progressDialogFragment.dismissAllowingStateLoss();
-    }
+//
+//    private synchronized void showProgressDialog(String message) {
+//        if (progressDialogFragment != null && progressDialogFragment.isVisible()) {
+//            // Before creating another loading dialog, close all opened loading dialogs (if any)
+//            progressDialogFragment.dismissAllowingStateLoss();
+//        }
+//        progressDialogFragment = null;
+//        progressDialogFragment = new ProgressDialogFragment(message);
+//        FragmentManager fm = getFragmentManager();
+//        progressDialogFragment.show(fm, ProgressDialogFragment.class.toString());
+//    }
+//
+//    private synchronized void dismissDialog() {
+//        progressDialogFragment.dismissAllowingStateLoss();
+//    }
 
     static {
         System.loadLibrary(mOpenCvLibrary);
     }
 
-    @Override
-    public void onClick(View view) {
-        Map<Integer, PointF> points = polygonView.getPoints();
+    public void startAcceptCountDown(){
+        new CountDownTimer(ScanConstants.ACCEPT_TIMER, 1000) {
+            public void onTick(long millisUntilFinished) {
+                timeElapsedView.setText( res.getString(R.string.timer_text,millisUntilFinished / 1000));
+            }
 
+            public void onFinish() {
+                timeElapsedView.setText( res.getString(R.string.timer_text,0));
+                cropAcceptBtn.performClick();
+            }
+        }.start();
+    }
+
+    @Override
+    public void onClick(View v) {
+//        called on clicking accept button (because of : cropAcceptBtn.setOnClickListener(this);)
+        Map<Integer, PointF> points = scannedPoints;//polygonView.getPoints();
+        Log.d("custom"+TAG, "onClick called.");
         Bitmap croppedBitmap;
 
         if (ScanUtils.isScanPointsValid(points)) {
@@ -322,11 +335,22 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
         } else {
             croppedBitmap = copyBitmap;
         }
-
-        String path = ScanUtils.saveToInternalMemory(croppedBitmap, ScanConstants.IMAGES_DIR,
-                ScanConstants.IMAGE_NAME, ScanActivity.this, 90)[0];
+        String path = ScanConstants.APPDATA_FOLDER;
+        boolean success = FileUtils.saveImg(croppedBitmap, path, ScanConstants.IMAGE_NAME);
         setResult(Activity.RESULT_OK, new Intent().putExtra(ScanConstants.SCANNED_RESULT, path));
+        Log.d("custom"+TAG, "Resuming.");
+
+        resumePreview();
         //bitmap.recycle();
+    }
+
+    public void resumePreview(){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
+            TransitionManager.beginDelayedTransition(containerScan);
+        cropLayout.setVisibility(View.GONE);
+        mImageSurfaceView.setPreviewCallback();
+    }
+    public void exitApp(){
         System.gc();
         finish();
     }

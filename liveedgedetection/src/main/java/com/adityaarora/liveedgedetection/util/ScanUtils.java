@@ -424,15 +424,20 @@ public class ScanUtils {
         Imgproc.warpPerspective(inputMat, outputMat, perspectiveTransform, new Size(resultWidth, resultHeight));
 
         Bitmap output = Bitmap.createBitmap(resultWidth, resultHeight, Bitmap.Config.ARGB_8888);
+//        Check for markers here.
+
         Utils.matToBitmap(outputMat, output);
         return output;
     }
 
     public static String[] saveToInternalMemory(Bitmap bitmap, String mFileDirectory, String
             mFileName, Context mContext, int mQuality) {
-
+        Log.d("custom"+TAG, "Save called");
         String[] mReturnParams = new String[2];
+        Log.d("custom"+TAG, "Directory load: " + mFileDirectory+"/"+mFileName);
         File mDirectory = getBaseDirectoryFromPathString(mFileDirectory, mContext);
+        Log.d("custom"+TAG, "File load");
+
         File mPath = new File(mDirectory, mFileName);
         try {
             FileOutputStream mFileOutputStream = new FileOutputStream(mPath);
@@ -440,39 +445,11 @@ public class ScanUtils {
             bitmap.compress(Bitmap.CompressFormat.JPEG, mQuality, mFileOutputStream);
             mFileOutputStream.close();
         } catch (Exception e) {
-            Log.e(TAG, e.getMessage(), e);
+            Log.e("custom"+TAG, e.getMessage(), e);
         }
         mReturnParams[0] = mDirectory.getAbsolutePath();
         mReturnParams[1] = mFileName;
         return mReturnParams;
-    }
-
-
-    public static boolean saveImg(Bitmap bitmap, String folder, String name) {
-        // default args
-        return saveImg(bitmap, folder, name, 95);
-    }
-
-    public static boolean saveImg(Bitmap bitmap, String folderpath, String filename, int mQuality) {
-
-        try {
-            Log.d("custom"+TAG, "saveImg: Making new directories for" + folderpath);
-            File folder = new File(folderpath);
-            folder.mkdirs();
-
-            Log.d("custom"+TAG, "saveImg: Touching filename: " + filename);
-            File file = new File(folder,filename);
-            file.createNewFile();
-
-            FileOutputStream mFileOutputStream = new FileOutputStream(file);
-            //Compress method used on the Bitmap object to write  image to output stream
-            bitmap.compress(Bitmap.CompressFormat.JPEG, mQuality, mFileOutputStream);
-            mFileOutputStream.close();
-        } catch (Exception e) {
-            Log.e("custom"+TAG, e.getMessage(), e);
-            return false;
-        }
-        return true;
     }
 
     public static byte[] readBytes(String source) {
