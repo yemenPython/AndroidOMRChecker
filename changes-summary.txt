@@ -22,8 +22,15 @@ Code-only changes -
 **** : You can have the app show all these effects to get more "familiar" with them.
 //--> canny output
 //--> morph output
+//--> thresh output
 --> template matching output
 
 just4fun :
 -> morph close on raw input
 -> histogram on raw input
+
+9 Apr:
+**Current code works on emulator; but fails on device! Gave a lot of time to debug Xray, it is not primarily required on phone anyway. Now giving a last try before moving on.
+Bitmap is too costly! Need to change it.
+// Bitmap bitmap = ScanUtils.decodeBitmapFromByteArray(data..
+We convert anyway into Mat later. lets have a mat first then.

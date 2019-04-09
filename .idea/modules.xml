@@ -2,9 +2,9 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/LiveEdgeDetection.iml" filepath="$PROJECT_DIR$/LiveEdgeDetection.iml" />
+      <module fileurl="file://$PROJECT_DIR$/AndroidOMRChecker.iml" filepath="$PROJECT_DIR$/AndroidOMRChecker.iml" />
+      <module fileurl="file://$PROJECT_DIR$/androidomr/androidomr.iml" filepath="$PROJECT_DIR$/androidomr/androidomr.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" />
-      <module fileurl="file://$PROJECT_DIR$/liveedgedetection/liveedgedetection.iml" filepath="$PROJECT_DIR$/liveedgedetection/liveedgedetection.iml" />
       <module fileurl="file://$PROJECT_DIR$/openCVLibrary340/openCVLibrary340.iml" filepath="$PROJECT_DIR$/openCVLibrary340/openCVLibrary340.iml" />
     </modules>
   </component>
