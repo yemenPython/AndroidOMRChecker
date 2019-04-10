@@ -7,19 +7,24 @@
     tools:context="com.udayraj.androidomr.activity.ScanActivity">
 
     <!-- First layer: camera preview-->
-    <FrameLayout
-        android:id="@+id/camera_preview"
+    <!--<FrameLayout-->
+        <!--android:id="@+id/camera_preview"-->
+        <!--android:layout_width="match_parent"-->
+        <!--android:layout_height="match_parent" />-->
+    <org.opencv.android.JavaCameraView
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
-
+        android:layout_height="match_parent"
+        android:id="@+id/opencv_camera_preview" />
     <!-- Debug Button: effects preview -->
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="top|center"
+        android:layout_gravity="top|start"
         android:layout_marginTop="10dp"
-        android:gravity="center">
+        android:layout_marginStart="10dp"
+        android:layout_marginLeft="10dp"
+        android:gravity="top|start">
 
     <ToggleButton
         android:id="@+id/xray_btn"
@@ -43,9 +48,12 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="bottom|center"
+        android:gravity="bottom|start"
+        android:layout_gravity="bottom|start"
         android:layout_marginBottom="10dp"
-        android:gravity="center">
+        android:layout_marginLeft="10dp"
+        android:layout_marginStart="10dp"
+        >
 
         <ToggleButton
             android:id="@+id/thresh_btn"

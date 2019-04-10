@@ -21,9 +21,12 @@ public class ScanCanvasView extends View {
 
     private final ArrayList<ScanShape> shapes = new ArrayList<>();
     private Rect canvasRect;
+    private Rect hoverRect;
     private final int statusbarHeight;
     public Bitmap cameraBitmap;
+    public Bitmap hoverBitmap;
     private boolean cameraBitmapSet=false;
+    private boolean hoverBitmapSet=false;
     public ScanCanvasView(Context context) {
         super(context);
         Resources res = context.getResources();
@@ -35,7 +38,12 @@ public class ScanCanvasView extends View {
             statusbarHeight =  res.getDimensionPixelSize(id);
         else
             statusbarHeight = (int) Math.ceil((Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? 24 : 25) * metrics.density);
-        canvasRect = new Rect(0, 0, width, height);
+        canvasRect = new Rect(0, (int)(statusbarHeight/2), width, (int)(height+statusbarHeight/2));
+        // bottom-right corner
+        int box_len =  (int)(width*19/40);
+        int startX =  (int)(width*20/40);
+        int startY =  (int)(height*28/40);
+        hoverRect = new Rect(startX, startY, box_len + startX, box_len + startY);
     }
 
     public class ScanShape {
@@ -65,6 +73,13 @@ public class ScanCanvasView extends View {
     public void unsetCameraBitmap() {
         cameraBitmapSet = false;
     }
+    public void unsetHoverBitmap() {
+        hoverBitmapSet = false;
+    }
+    public void setHoverBitmap(Bitmap bm) {
+        this.hoverBitmap = bm;
+        hoverBitmapSet = true;
+    }
     public void setCameraBitmap(Bitmap bm) {
         this.cameraBitmap = bm;
         cameraBitmapSet = true;
@@ -74,9 +89,14 @@ public class ScanCanvasView extends View {
     protected void onDraw(Canvas canvas) {
         // draw the frame.
         super.onDraw(canvas);
+
+        if(hoverBitmapSet) {
+            canvas.drawBitmap(hoverBitmap, null, hoverRect, null);
+        }
+
         if(cameraBitmapSet) {
 //            if(cameraBitmap.getWidth() != canvasRect.width() || cameraBitmap.getHeight() != canvasRect.height())
-//                cameraBitmap = ScanUtils.resizeToScreenContentSize(cameraBitmap, canvasRect.width(),canvasRect.height());
+//                cameraBitmap = Utils.resizeToScreenContentSize(cameraBitmap, canvasRect.width(),canvasRect.height());
             canvas.drawBitmap(cameraBitmap, null, canvasRect, null);
         }
         else{
@@ -88,7 +108,6 @@ public class ScanCanvasView extends View {
 
             int contentWidth = getWidth() - paddingLeft - paddingRight;
             int contentHeight = getHeight() - paddingTop - paddingBottom;
-
             for (ScanShape s : shapes) {
                 s.getShape().resize(contentWidth, contentHeight);
                 s.draw(canvas);

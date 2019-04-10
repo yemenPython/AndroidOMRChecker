@@ -9,7 +9,7 @@ import android.widget.ImageView;
 
 import com.udayraj.androidomr.activity.ScanActivity;
 import com.udayraj.androidomr.constants.SC;
-import com.udayraj.androidomr.util.ScanUtils;
+import com.udayraj.androidomr.util.Utils;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -37,7 +37,7 @@ public class MainActivity extends AppCompatActivity {
             if(resultCode == Activity.RESULT_OK) {
                 if(null != data && null != data.getExtras()) {
                     String filePath = data.getExtras().getString(SC.SCANNED_RESULT);
-                    Bitmap baseBitmap = ScanUtils.decodeBitmapFromFile(filePath, SC.IMAGE_NAME);
+                    Bitmap baseBitmap = Utils.decodeBitmapFromFile(filePath, SC.IMAGE_NAME);
                     scannedImageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
                     scannedImageView.setImageBitmap(baseBitmap);
                 }

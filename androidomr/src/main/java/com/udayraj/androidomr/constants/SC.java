@@ -19,14 +19,16 @@ public class SC {
 
 
     public static final int uniform_width_hd = (int) (1000 / 1.5);
+    public static final int marker_scale_fac = 38;
     public static final int uniform_height_hd = (int)(1231 / 1.5);
 
     public static final int ACCEPT_TIMER = 5000;
     public static final int AUTOCAP_TIMER = 5000;
-    public static final int CANNY_THRESHOLD_L = 35;
-    public static final int CANNY_THRESHOLD_U = 135;
-    public static final int KSIZE_BLUR = 5;
-    public static final int KSIZE_CLOSE = 10;
+//    TODO: link these into activity UI
+    public static int CANNY_THRESHOLD_L = 35;
+    public static int CANNY_THRESHOLD_U = 135;
+    public static int KSIZE_BLUR = 3;
+    public static int KSIZE_CLOSE = 10;
 
     public static final int HIGHER_SAMPLING_THRESHOLD = 200;
 

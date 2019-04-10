@@ -1,20 +1,17 @@
 package com.udayraj.androidomr.activity;
 
-import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
-import android.graphics.PointF;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.Handler;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.transition.TransitionManager;
 import android.util.Log;
@@ -34,23 +31,30 @@ import com.udayraj.androidomr.constants.SC;
 import com.udayraj.androidomr.enums.ScanHint;
 import com.udayraj.androidomr.interfaces.IScanner;
 import com.udayraj.androidomr.util.FileUtils;
-import com.udayraj.androidomr.util.ScanUtils;
-import com.udayraj.androidomr.view.PolygonPoints;
-import com.udayraj.androidomr.view.PolygonView;
-import com.udayraj.androidomr.view.ProgressDialogFragment;
-import com.udayraj.androidomr.view.Quadrilateral;
-import com.udayraj.androidomr.view.ScanSurfacePreview;
+import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.LoaderCallbackInterface;
+import org.opencv.android.OpenCVLoader;
+import com.udayraj.androidomr.util.Utils;
+import org.opencv.android.CameraBridgeViewBase;
+import android.view.WindowManager;
+import android.view.SurfaceView;
 
-import org.opencv.android.Utils;
+import com.udayraj.androidomr.view.ScanCameraViewListener;
+import com.udayraj.androidomr.view.ScanCanvasView;
+import com.udayraj.androidomr.view.ScanSurfacePreview;
+import android.app.Activity;
+import org.opencv.core.Core;
+import org.opencv.core.Rect;
+import org.opencv.core.Size;
+import android.os.Bundle;
+import android.view.View;
+import android.view.Window;
+
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
-import org.opencv.core.Point;
-import org.opencv.imgproc.Imgproc;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
-import java.util.Stack;
 
 import static android.view.View.GONE;
 
@@ -58,41 +62,80 @@ import static android.view.View.GONE;
  * This class initiates camera and detects edges on live view
  */
 public class ScanActivity extends AppCompatActivity implements IScanner, View.OnClickListener {
+    private static final String mOpenCvLibrary = "opencv_java3";
+    static {
+        System.loadLibrary(mOpenCvLibrary);
+    }
     private static final String TAG = ScanActivity.class.getSimpleName();
 
-    private static final int MY_PERMISSIONS_REQUEST_TOKEN= 101;
-
-    private  Map<Integer, PointF>  scannedPoints;
-
-    private ViewGroup containerScan;
-    private FrameLayout cameraPreviewLayout;
-    private FrameLayout effectsPreviewLayout;
-    private ScanSurfacePreview mImageSurfaceView;
-    
-    private static final String mOpenCvLibrary = "opencv_java3";
-    private static ProgressDialogFragment progressDialogFragment;
-    private TextView captureHintText;
-    private TextView timeElapsedText;
-    private LinearLayout captureHintLayout;
-
-    public final static Stack<PolygonPoints> allDraggedPointsStack = new Stack<>();
-    private ImageView cropImageView;
-    private View cropAcceptBtn;
-    private View cropRejectBtn;
-    private Bitmap copyBitmap;
-    private FrameLayout cropLayout;
     private Resources res;
-    private  int PERMISSION_ALL = 1;
+    private static final int MY_PERMISSIONS_REQUEST_TOKEN= 101;
     private  String[] PERMISSIONS = {
             android.Manifest.permission.WRITE_EXTERNAL_STORAGE,
             android.Manifest.permission.CAMERA
     };
+    private Bitmap copyBitmap;
+    private ViewGroup containerScan;
+    private FrameLayout cropLayout;
+    private LinearLayout captureHintLayout;
+    private View cropAcceptBtn;
+    private View cropRejectBtn;
+    private TextView captureHintText;
+    private TextView timeElapsedText;
+    private ImageView cropImageView;
+    // private ScanSurfacePreview mImageSurfaceView;
+    CameraBridgeViewBase mOpenCvCameraView;
+    private FrameLayout cameraPreviewLayout;
+    ScanCameraViewListener mScanCameraViewListener;
+
+    /** Called when the activity is first created. */
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_scan);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+        requestWindowFeature(Window.FEATURE_NO_TITLE);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         init();
+    }
+    private BaseLoaderCallback  mLoaderCallback = new BaseLoaderCallback(this) {
+        @Override
+        public void onManagerConnected(int status) {
+            switch (status) {
+                case LoaderCallbackInterface.SUCCESS:
+                {
+                    Log.i(TAG, "OpenCV loaded successfully");
+                    mOpenCvCameraView.enableView();
+                    // mOpenCvCameraView.setOnTouchListener(ScanActivity.this);
+                    mOpenCvCameraView.setOnClickListener(ScanActivity.this);
+                } break;
+                default:
+                {
+                    super.onManagerConnected(status);
+                } break;
+            }
+        }
+    };
+
+    @Override
+    public void onPause()
+    {
+        super.onPause();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
+    }
+
+    @Override
+    public void onResume()
+    {
+        super.onResume();
+        if (!OpenCVLoader.initDebug()) {
+            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
+        } else {
+            Log.d(TAG, "OpenCV library found inside package. Using it!");
+            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        }
     }
 
     private void init() {
@@ -101,6 +144,8 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
         // outermost view = containerScan
         containerScan = findViewById(R.id.container_scan);
         cameraPreviewLayout = findViewById(R.id.camera_preview);
+        mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.opencv_camera_preview);
+
 
         cropImageView = findViewById(R.id.crop_image_view);
         captureHintLayout = findViewById(R.id.capture_hint_layout);
@@ -112,10 +157,16 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
         cropAcceptBtn = findViewById(R.id.crop_accept_btn);
         cropRejectBtn = findViewById(R.id.crop_reject_btn);
         cropAcceptBtn.setOnClickListener(this);
+        final AppCompatActivity context = this;
         cropRejectBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 resumePreview();
+                // mImageSurfaceView.cancelAutoCapture();
+                // if(mImageSurfaceView.isAutoCaptureScheduled)
+                mScanCameraViewListener.cancelAutoCapture();
+                if(mScanCameraViewListener.isAutoCaptureScheduled)
+                    Toast.makeText(context, "Capture Cancelled", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -131,13 +182,16 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
             final int key = id;
             button.setOnCheckedChangeListener(new ToggleButton.OnCheckedChangeListener(){
                 @Override
-                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked){ mImageSurfaceView.buttonChecked.put(key ,isChecked);}
+                public void onCheckedChanged(CompoundButton buttonView, boolean isChecked){
+                    mScanCameraViewListener.buttonChecked.put(key ,isChecked);
+                    mScanCameraViewListener.cancelAutoCapture();
+                    if(mScanCameraViewListener.isAutoCaptureScheduled)
+                        Toast.makeText(context, "Capture Cancelled", Toast.LENGTH_SHORT).show();
+                }
             });
         }
-
         SC.APPDATA_FOLDER = ScanActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/" + SC.IMAGES_DIR;
-
-        getPermissions();
+        getPermissionsAndStart();
     }
     public boolean hasAllPermissions() {
         for (String permission : PERMISSIONS) {
@@ -148,7 +202,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
         return true;
     }
 
-    private void getPermissions() {
+    private void getPermissionsAndStart() {
         Log.d("custom" + TAG, "Asking permissions");
         // This runs in a separate thread : Not necessarily prompts the user beforehand!
         ActivityCompat.requestPermissions(this, PERMISSIONS, MY_PERMISSIONS_REQUEST_TOKEN);
@@ -177,11 +231,17 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
                 runOnUiThread(new Runnable() {
                     @Override
                     public void run() {
-                        mImageSurfaceView = new ScanSurfacePreview(ScanActivity.this, ScanActivity.this);
-                        cameraPreviewLayout.addView(mImageSurfaceView);
+                        // mImageSurfaceView = new ScanSurfacePreview(ScanActivity.this, ScanActivity.this);
+                        // cameraPreviewLayout.addView(mImageSurfaceView);
+                        ScanCanvasView scanCanvasView = new ScanCanvasView(ScanActivity.this);
+                        cameraPreviewLayout.addView(scanCanvasView);
+                        mScanCameraViewListener = new ScanCameraViewListener(scanCanvasView,ScanActivity.this);
+                        mOpenCvCameraView.setCvCameraViewListener(mScanCameraViewListener);
+                        mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
                     }
                 });
             }
+
         }, 500);
     }
     private void onStorageGranted() {
@@ -214,6 +274,10 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
                 captureHintText.setText(res.getString(R.string.hold_still));
                 captureHintLayout.setBackground(res.getDrawable(R.drawable.hint_green));
                 break;
+            case FIND_MARKERS:
+                captureHintText.setText(res.getString(R.string.find_marker));
+                captureHintLayout.setBackground(res.getDrawable(R.drawable.hint_white));
+                break;
             case NO_MESSAGE:
                 captureHintLayout.setVisibility(GONE);
                 break;
@@ -222,7 +286,8 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
         }
     }
 
-//    called from ScanSurfacePreview.pictureCallback
+    //    This is NOT LIVE function (its in ScanSurfacePreview)
+//    called after autoCapture
     @Override
     public void onPictureClicked(final Bitmap bitmap) {
         try {
@@ -231,40 +296,30 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
             int height = getWindow().findViewById(Window.ID_ANDROID_CONTENT).getHeight();
             int width = getWindow().findViewById(Window.ID_ANDROID_CONTENT).getWidth();
 
-            copyBitmap = ScanUtils.resizeToScreenContentSize(copyBitmap, width, height);
+            copyBitmap = Utils.resizeToScreenContentSize(copyBitmap, width, height);
 
             Mat originalMat = new Mat(copyBitmap.getHeight(), copyBitmap.getWidth(), CvType.CV_8UC1);
-            Utils.bitmapToMat(copyBitmap, originalMat);
+            org.opencv.android.Utils.bitmapToMat(copyBitmap, originalMat);
 
-            ArrayList<PointF> points;
+//            Point[] points = Utils.getPolygonDefaultPoints(width, height);
             try {
-                Quadrilateral quad = ScanUtils.findPage(originalMat);
-                if (null != quad) {
-                    double resultArea = Math.abs(Imgproc.contourArea(quad.contour));
-                    double previewArea = originalMat.rows() * originalMat.cols();
-                    if (resultArea > previewArea * 0.08) {
-                        points = new ArrayList<>();
-                        points.add(new PointF((float) quad.points[0].x, (float) quad.points[0].y));
-                        points.add(new PointF((float) quad.points[1].x, (float) quad.points[1].y));
-                        points.add(new PointF((float) quad.points[3].x, (float) quad.points[3].y));
-                        points.add(new PointF((float) quad.points[2].x, (float) quad.points[2].y));
-                    } else {
-                        points = ScanUtils.getPolygonDefaultPoints(width, height);
-                    }
-
-                } else {
-                    points = ScanUtils.getPolygonDefaultPoints(width, height);
-                }
-
-                scannedPoints = PolygonView.getOrderedPoints(points);
+//                Quadrilateral quad = Utils.findPage(originalMat);
+//                if (null != quad) {
+//                    double resultArea = Math.abs(Imgproc.contourArea(quad.contour));
+//                    double previewArea = originalMat.rows() * originalMat.cols();
+//                    if (resultArea > previewArea * 0.08) {
+//                        points = new Point[] {
+//                                new Point(quad.points[0].x, quad.points[0].y),
+//                                new Point(quad.points[1].x, quad.points[1].y),
+//                                new Point(quad.points[3].x, quad.points[3].y),
+//                                new Point(quad.points[2].x, quad.points[2].y)
+//                        };
+//                    }
+//                }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
                     TransitionManager.beginDelayedTransition(containerScan);
 
-                cropImageView.setImageBitmap(copyBitmap);
-                cropImageView.setScaleType(ImageView.ScaleType.FIT_XY);
-                cropLayout.setVisibility(View.VISIBLE);
-
-                startAcceptCountDown();
+                showAcceptOverlay(copyBitmap);
             } catch (Exception e) {
                 Log.e(TAG, e.getMessage(), e);
             }
@@ -272,24 +327,15 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
             Log.e(TAG, e.getMessage(), e);
         }
     }
-//
-//    private synchronized void showProgressDialog(String message) {
-//        if (progressDialogFragment != null && progressDialogFragment.isVisible()) {
-//            // Before creating another loading dialog, close all opened loading dialogs (if any)
-//            progressDialogFragment.dismissAllowingStateLoss();
-//        }
-//        progressDialogFragment = null;
-//        progressDialogFragment = new ProgressDialogFragment(message);
-//        FragmentManager fm = getFragmentManager();
-//        progressDialogFragment.show(fm, ProgressDialogFragment.class.toString());
-//    }
-//
-//    private synchronized void dismissDialog() {
-//        progressDialogFragment.dismissAllowingStateLoss();
-//    }
 
-    static {
-        System.loadLibrary(mOpenCvLibrary);
+
+    public void showAcceptOverlay(Bitmap copyBitmap){
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
+        cropImageView.setImageBitmap(copyBitmap);
+        cropImageView.setScaleType(ImageView.ScaleType.FIT_XY);
+        cropLayout.setVisibility(View.VISIBLE);
+        startAcceptCountDown();
     }
 
     public void startAcceptCountDown(){
@@ -305,37 +351,30 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
         }.start();
     }
 
+    //        called on clicking accept button (because of : cropAcceptBtn.setOnClickListener(this);)
     @Override
     public void onClick(View v) {
-//        called on clicking accept button (because of : cropAcceptBtn.setOnClickListener(this);)
-        Map<Integer, PointF> points = scannedPoints;//polygonView.getPoints();
-        Log.d("custom"+TAG, "onClick called.");
-        Bitmap croppedBitmap;
-
-        if (ScanUtils.isScanPointsValid(points)) {
-            Point point1 = new Point(points.get(0).x, points.get(0).y);
-            Point point2 = new Point(points.get(1).x, points.get(1).y);
-            Point point3 = new Point(points.get(2).x, points.get(2).y);
-            Point point4 = new Point(points.get(3).x, points.get(3).y);
-            croppedBitmap = ScanUtils.enhanceReceipt(copyBitmap, point1, point2, point3, point4);
-        } else {
-            croppedBitmap = copyBitmap;
-        }
+        Log.d("custom"+TAG, "Image Accepted.");
         String path = SC.STORAGE_FOLDER;
-        Toast.makeText(this, "Saving image: " + path+SC.IMAGE_NAME, Toast.LENGTH_SHORT).show();
-        boolean success = FileUtils.saveBitmap(croppedBitmap, path, SC.IMAGE_NAME);
+//        Toast.makeText(this, "Saving to: " + path+SC.IMAGE_NAME, Toast.LENGTH_SHORT).show();
+        boolean success = FileUtils.saveBitmap(copyBitmap, path, SC.IMAGE_NAME);
         setResult(Activity.RESULT_OK, new Intent().putExtra(SC.SCANNED_RESULT, path));
-        Log.d("custom"+TAG, "Resuming.");
-
         resumePreview();
-        //bitmap.recycle();
+    }
+
+    public void onDestroy() {
+        super.onDestroy();
+        if (mOpenCvCameraView != null)
+            mOpenCvCameraView.disableView();
     }
 
     public void resumePreview(){
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT)
             TransitionManager.beginDelayedTransition(containerScan);
         cropLayout.setVisibility(View.GONE);
-        mImageSurfaceView.setPreviewCallback();
+        // mImageSurfaceView.setPreviewCallback();
+        mOpenCvCameraView.enableView();
+        mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
     }
     public void exitApp(){
         System.gc();
