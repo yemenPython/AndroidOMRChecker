@@ -59,7 +59,7 @@ public class ImageDetectionProperties {
     }
 
     public boolean isAngleNotCorrect(MatOfPoint2f approx) {
-        return getMaxCosine(approx) || isLeftEdgeDistorted() || isRightEdgeDistorted();
+        return isMaxCosineTooHigh(approx) || isLeftEdgeDistorted() || isRightEdgeDistorted();
     }
 
     private boolean isRightEdgeDistorted() {
@@ -70,12 +70,12 @@ public class ImageDetectionProperties {
         return Math.abs(topLeftPoint.y - bottomLeftPoint.y) > 100;
     }
 
-    private boolean getMaxCosine(MatOfPoint2f approx) {
+    private boolean isMaxCosineTooHigh(MatOfPoint2f approx) {
         double maxCosine = 0;
         Point[] approxPoints = approx.toArray();
-        maxCosine = ScanUtils.getMaxCosine(maxCosine, approxPoints);
+        maxCosine = Utils.getMaxCosine(maxCosine, approxPoints);
 //        return maxCosine >= 0.085; //(smallest angle is below 87 deg)
-        return maxCosine >= 0.35; //(smallest angle is below 87 deg)
+        return maxCosine >= 0.35;
     }
 
     public boolean isEdgeTouching() {
