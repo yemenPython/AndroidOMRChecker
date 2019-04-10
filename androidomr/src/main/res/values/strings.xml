@@ -8,6 +8,7 @@
     <string name="move_closer">Move closer</string>
     <string name="adjust_angle">Adjust angle</string>
     <string name="hold_still">Hold still</string>
+    <string name="find_marker">Not enough markers</string>
     <string name="capturing">Capturing image</string>
     <string name="timer_text">(%1$d s)</string>
 
