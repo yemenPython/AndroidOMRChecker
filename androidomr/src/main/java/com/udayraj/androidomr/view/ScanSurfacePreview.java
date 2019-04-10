@@ -27,12 +27,13 @@ import com.udayraj.androidomr.enums.ScanHint;
 import com.udayraj.androidomr.interfaces.IScanner;
 import com.udayraj.androidomr.util.FileUtils;
 import com.udayraj.androidomr.util.ImageDetectionProperties;
-import com.udayraj.androidomr.util.ScanUtils;
+import com.udayraj.androidomr.util.Utils;
 
 import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
+import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
@@ -62,7 +63,7 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
     private final IScanner iScanner;
     private CountDownTimer autoCaptureTimer;
     private int secondsLeft;
-    private boolean isAutoCaptureScheduled;
+    public boolean isAutoCaptureScheduled;
     private Camera.Size previewSize;
     private boolean isCapturing = false;
     public Map<Integer, Boolean> buttonChecked = new HashMap<>();
@@ -103,9 +104,7 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
             Log.d("custom"+TAG,"Marker found in storage folder");
         }
 
-        Mat marker = Imgcodecs.imread(mFile.getAbsolutePath());
-        Log.d("custom"+TAG,"Marker dims: "+marker.rows()+","+marker.cols());
-
+        Mat marker = Utils.resize_util(Imgcodecs.imread(mFile.getAbsolutePath(),Imgcodecs.IMREAD_GRAYSCALE), (int) SC.uniform_width_hd/SC.marker_scale_fac);
         return marker;
     }
 
@@ -158,10 +157,10 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
             return;
         }
         if (previewSize == null)
-            previewSize = ScanUtils.getOptimalPreviewSize(camera, vWidth, vHeight);
+            previewSize = Utils.getOptimalPreviewSize(camera, vWidth, vHeight);
 
         Camera.Parameters parameters = camera.getParameters();
-        camera.setDisplayOrientation(ScanUtils.configureCameraAngle((Activity) context));
+        camera.setDisplayOrientation(Utils.configureCameraAngle((Activity) context));
         parameters.setPreviewSize(previewSize.width, previewSize.height);
         if (parameters.getSupportedFocusModes() != null
                 && parameters.getSupportedFocusModes().contains(Camera.Parameters.FOCUS_MODE_CONTINUOUS_PICTURE)) {
@@ -171,7 +170,7 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
             parameters.setFocusMode(Camera.Parameters.FOCUS_MODE_AUTO);
         }
 
-        Camera.Size size = ScanUtils.determinePictureSize(camera, parameters.getPreviewSize());
+        Camera.Size size = Utils.determinePictureSize(camera, parameters.getPreviewSize());
         parameters.setPictureSize(size.width, size.height);
         parameters.setPictureFormat(ImageFormat.JPEG);
 
@@ -210,14 +209,6 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
         return mat;
     }
 
-    public Mat preProcessMat(Mat mat){
-        Mat processedMat = ScanUtils.resize_util(mat, SC.uniform_width_hd, SC.uniform_height_hd);
-        Imgproc.cvtColor(processedMat, processedMat, Imgproc.COLOR_BGR2GRAY, 4);
-        Imgproc.blur(processedMat, processedMat, new Size(SC.KSIZE_BLUR, SC.KSIZE_BLUR));
-//        TODO do normalization here.
-        return processedMat;
-    }
-
     //    This is the "LIVE" function, the HEART of this app.
     private final Camera.PreviewCallback previewCallback = new Camera.PreviewCallback() {
         @Override
@@ -229,44 +220,50 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
 //                    Log.d("custom"+TAG, "onPreviewFrame - received image " + pictureSize.width + "x" + pictureSize.height);
 
                 Mat mat = byteArrayToMat(data, pictureSize);
-                Mat processedMat = preProcessMat(mat);
+                Mat processedMat = Utils.preProcessMat(mat);
                 mat.release();
 
                 if (!getBool(buttonChecked, R.id.xray_btn)) {
                     scanCanvasView.unsetCameraBitmap();
+//                    scanCanvasView.unsetHoverBitmap();
                     try {
-                        Size originalPreviewSize = processedMat.size();
-                        int originalPreviewArea = processedMat.rows() * processedMat.cols();
-                        Quadrilateral largestQuad = ScanUtils.findPage(processedMat);
-                        processedMat.release();
-                        clearAndInvalidateCanvas();
-
+                        Quadrilateral largestQuad = Utils.findPage(processedMat);
                         if (null != largestQuad) {
-                            drawLargestRect(largestQuad.contour, largestQuad.points, originalPreviewSize, originalPreviewArea);
-                            //TODO                    call template match here. then call draw marker boxes
+                            Size originalPreviewSize = processedMat.size();
+                            int originalPreviewArea = processedMat.rows() * processedMat.cols();
+                            guidedDrawRect(processedMat, largestQuad.contour, largestQuad.points, originalPreviewSize, originalPreviewArea);
+
+//                            Imgproc.rectangle(processedMat,  new Point(50,50), new Point(75,75), new Scalar(5, 5, 5), 4);
+//                            Bitmap cameraBitmap = Utils.matToBitmapRotate(processedMat);
+//                            scanCanvasView.setCameraBitmap(cameraBitmap);
                         } else {
                             showFindingReceiptHint();
                         }
-
+                        // set to render frame again
+//                        clearAndInvalidateCanvas();
+                        processedMat.release();
                     } catch (Exception e) {
                         Log.d(TAG, "Uh oh.. Camera error?");
                         showFindingReceiptHint();
                     }
                 }
                 else{
-//                    TODO : Can apply more live filters here:
                     iScanner.displayHint(ScanHint.NO_MESSAGE);
-                    if(getBool(buttonChecked, R.id.canny_btn))
-                        ScanUtils.canny(processedMat);
-                    if(getBool(buttonChecked, R.id.morph_btn))
-                        ScanUtils.morph(processedMat);
+
+//                    TODO : Can apply more live filters here:
                     if(getBool(buttonChecked, R.id.thresh_btn))
-                        ScanUtils.thresh(processedMat);
+//                        Utils.thresh(processedMat);
+                        Utils.normalize(processedMat);
+                    if(getBool(buttonChecked, R.id.canny_btn))
+                        Utils.canny(processedMat);
+                    if(getBool(buttonChecked, R.id.morph_btn))
+                        Utils.morph(processedMat);
                     if(getBool(buttonChecked, R.id.contour_btn))
-                        ScanUtils.drawContours(processedMat);
+                        Utils.drawContours(processedMat);
+                    // TODO : templateMatching output here?!
 
                     // rotate the bitmap for portrait
-                    Bitmap cameraBitmap = ScanUtils.matToBitmapRotate(processedMat);
+                    Bitmap cameraBitmap = Utils.matToBitmapRotate(processedMat);
                     scanCanvasView.setCameraBitmap(cameraBitmap);
                     // set to render frame again
                     clearAndInvalidateCanvas();
@@ -278,14 +275,11 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
     private Boolean getBool(Map<Integer,Boolean> map, Integer k){
         return (map.containsKey(k)) ? map.get(k) : false;
     }
-    private void drawLargestRect(MatOfPoint2f approx, Point[] points, Size stdSize, int previewArea) {
+    private void guidedDrawRect(Mat processedMat, MatOfPoint2f approx, Point[] points, Size stdSize, int previewArea) {
         Path path = new Path();
         // ATTENTION: axes are swapped
         float previewWidth = (float) stdSize.height;
         float previewHeight = (float) stdSize.width;
-
-        Log.i(TAG, "previewWidth: " + String.valueOf(previewWidth));
-        Log.i(TAG, "previewHeight: " + String.valueOf(previewHeight));
 
         //Points are drawn in anticlockwise direction
         path.moveTo(previewWidth - (float) points[0].y, (float) points[0].x);
@@ -301,19 +295,9 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
         Paint border = new Paint();
 
         //Height calculated on Y axis
-        double resultHeight = points[1].x - points[0].x;
-        double bottomHeight = points[2].x - points[3].x;
-        if (bottomHeight > resultHeight)
-            resultHeight = bottomHeight;
-
+        double resultHeight = Math.max(points[1].x - points[0].x, points[2].x - points[3].x);
         //Width calculated on X axis
-        double resultWidth = points[3].y - points[0].y;
-        double bottomWidth = points[2].y - points[1].y;
-        if (bottomWidth > resultWidth)
-            resultWidth = bottomWidth;
-
-        Log.i(TAG, "resultWidth: " + String.valueOf(resultWidth));
-        Log.i(TAG, "resultHeight: " + String.valueOf(resultHeight));
+        double resultWidth = Math.max(points[3].y - points[0].y, points[2].y - points[1].y);
 
         ImageDetectionProperties imgDetectionPropsObj
                 = new ImageDetectionProperties(previewWidth, previewHeight, resultWidth, resultHeight,
@@ -324,44 +308,49 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
         if (imgDetectionPropsObj.isDetectedAreaBeyondLimits()) {
             scanHint = ScanHint.FIND_RECT;
             cancelAutoCapture();
-        } else if (imgDetectionPropsObj.isDetectedAreaBelowLimits()) {
+        }
+        else if (imgDetectionPropsObj.isDetectedAreaBelowLimits()) {
             cancelAutoCapture();
             if (imgDetectionPropsObj.isEdgeTouching()) {
                 scanHint = ScanHint.MOVE_AWAY;
             } else {
                 scanHint = ScanHint.MOVE_CLOSER;
             }
-        } else if (imgDetectionPropsObj.isDetectedHeightAboveLimit()) {
+        }
+        else if (imgDetectionPropsObj.isDetectedHeightAboveLimit()
+                || imgDetectionPropsObj.isDetectedWidthAboveLimit()
+                || imgDetectionPropsObj.isDetectedAreaAboveLimit()
+                || imgDetectionPropsObj.isEdgeTouching()) {
             cancelAutoCapture();
             scanHint = ScanHint.MOVE_AWAY;
-        } else if (imgDetectionPropsObj.isDetectedWidthAboveLimit() || imgDetectionPropsObj.isDetectedAreaAboveLimit()) {
-            cancelAutoCapture();
-            scanHint = ScanHint.MOVE_AWAY;
-        } else {
-            if (imgDetectionPropsObj.isEdgeTouching()) {
-                cancelAutoCapture();
-                scanHint = ScanHint.MOVE_AWAY;
-            } else if (imgDetectionPropsObj.isAngleNotCorrect(approx)) {
+        }
+        else {
+            if (imgDetectionPropsObj.isAngleNotCorrect(approx)) {
                 cancelAutoCapture();
                 scanHint = ScanHint.ADJUST_ANGLE;
-            } else {
-                Log.i(TAG, "GREEN" + "(resultWidth/resultHeight) > 4: " + (resultWidth / resultHeight) +
-                        " points[0].x == 0 && points[3].x == 0: " + points[0].x + ": " + points[3].x +
-                        " points[2].x == previewHeight && points[1].x == previewHeight: " + points[2].x + ": " + points[1].x +
-                        "previewHeight: " + previewHeight);
-                scanHint = ScanHint.CAPTURING_IMAGE;
-                clearAndInvalidateCanvas();
+            }
+            else {
+                if(!Utils.checkForMarkers(processedMat, points, markerToMatch)) {
+                    cancelAutoCapture();
+                    scanHint = ScanHint.FIND_MARKERS;
+                }
+                else{
+                    // markers found too
+                    scanHint = ScanHint.CAPTURING_IMAGE;
+                    clearAndInvalidateCanvas();
 
-                if (!isAutoCaptureScheduled) {
-                    scheduleAutoCapture(scanHint);
+                    if (!isAutoCaptureScheduled) {
+                        scheduleAutoCapture(scanHint);
+                    }
                 }
             }
         }
-        Log.i(TAG," Area: " + String.valueOf(area) +
-                " ROI Area: " + Math.round(100 *  area / previewArea)+"%" +
-                " Label: " + scanHint.toString());
+//        Log.i(TAG," Area: " + area +
+//                " Preview Area: "+ previewArea +
+//                " ROI Area: " + Math.round(100 *  area / previewArea)+"%" +
+//                " Label: " + scanHint.toString());
 
-        border.setStrokeWidth(12);
+        border.setStrokeWidth(7);
         iScanner.displayHint(scanHint);
         setPaintAndBorder(scanHint, paint, border);
         scanCanvasView.clear();
@@ -378,13 +367,8 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
                     secondsLeft = Math.round((float) millisUntilFinished / 1000.0f);
                 }
                 Log.v(TAG, "" + millisUntilFinished / 1000);
-                switch (secondsLeft) {
-                    case 1:
-                        autoCapture(scanHint);
-                        break;
-                    default:
-                        break;
-                }
+                if(secondsLeft == 1)
+                    autoCapture(scanHint);
             }
 
             public void onFinish() {
@@ -411,7 +395,7 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
         }
     }
 
-    private void cancelAutoCapture() {
+    public void cancelAutoCapture() {
         if (isAutoCaptureScheduled) {
             isAutoCaptureScheduled = false;
             if (null != autoCaptureTimer) {
@@ -450,6 +434,8 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
         border.setColor(borderColor);
     }
 
+
+//    Things done 'during' capture
     private final Camera.PictureCallback pictureCallback = new Camera.PictureCallback() {
         @Override
         public void onPictureTaken(byte[] data, Camera camera) {
@@ -457,12 +443,13 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
             iScanner.displayHint(ScanHint.NO_MESSAGE);
             clearAndInvalidateCanvas();
 
-            Bitmap bitmap = ScanUtils.decodeBitmapFromByteArray(data,SC.HIGHER_SAMPLING_THRESHOLD, SC.HIGHER_SAMPLING_THRESHOLD);
+            Bitmap bitmap = Utils.decodeBitmapFromByteArray(data,SC.HIGHER_SAMPLING_THRESHOLD, SC.HIGHER_SAMPLING_THRESHOLD);
 
             Matrix matrix = new Matrix();
             matrix.postRotate(90);
             Bitmap rotated = Bitmap.createBitmap(bitmap, 0, 0, bitmap.getWidth(), bitmap.getHeight(), matrix, true);
             bitmap.recycle();
+//            --> Picture Taken step.. onClick be called next
             Log.d("customCheck","pictureCallbackWhen");
             iScanner.onPictureClicked(rotated);
             postDelayed(new Runnable() {
@@ -494,7 +481,7 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
         vWidth = resolveSize(getSuggestedMinimumWidth(), widthMeasureSpec);
         vHeight = resolveSize(getSuggestedMinimumHeight(), heightMeasureSpec);
         setMeasuredDimension(vWidth, vHeight);
-        previewSize = ScanUtils.getOptimalPreviewSize(camera, vWidth, vHeight);
+        previewSize = Utils.getOptimalPreviewSize(camera, vWidth, vHeight);
     }
 
     @SuppressWarnings("SuspiciousNameCombination")
@@ -512,7 +499,7 @@ public class ScanSurfacePreview extends FrameLayout implements SurfaceHolder.Cal
                 previewWidth = previewSize.width;
                 previewHeight = previewSize.height;
 
-                int displayOrientation = ScanUtils.configureCameraAngle((Activity) context);
+                int displayOrientation = Utils.configureCameraAngle((Activity) context);
                 if (displayOrientation == 90 || displayOrientation == 270) {
                     previewWidth = previewSize.height;
                     previewHeight = previewSize.width;

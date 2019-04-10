@@ -36,7 +36,7 @@ import android.view.animation.AccelerateDecelerateInterpolator;
 import android.widget.OverScroller;
 import android.widget.Scroller;
 
-import com.udayraj.androidomr.util.ScanUtils;
+import com.udayraj.androidomr.util.Utils;
 
 /**
  * This class provides pinch to zoom capability to an image
@@ -210,7 +210,7 @@ public class TouchImageView extends android.support.v7.widget.AppCompatImageView
      * @return true if image is zoomed
      */
     public boolean isZoomed() {
-        return !(ScanUtils.compareFloats(normalizedScale,1));
+        return !(Utils.compareFloats(normalizedScale,1));
     }
     
     /**
@@ -453,7 +453,7 @@ public class TouchImageView extends android.support.v7.widget.AppCompatImageView
         
         float fixTransX = getFixTrans(transX, viewWidth, getImageWidth());
         float fixTransY = getFixTrans(transY, viewHeight, getImageHeight());
-        if (!ScanUtils.compareFloats(fixTransX,0) || !ScanUtils.compareFloats(fixTransY,0)) {
+        if (!Utils.compareFloats(fixTransX,0) || !Utils.compareFloats(fixTransY,0)) {
             matrix.postTranslate(fixTransX, fixTransY);
         }
     }
@@ -607,7 +607,7 @@ public class TouchImageView extends android.support.v7.widget.AppCompatImageView
         	// to NaN in translateMatrixAfterRotate. To avoid this, call savePreviousImageValues
         	// to set them equal to the current values.
         	//
-            if (ScanUtils.compareFloats(prevMatchViewWidth,0) || ScanUtils.compareFloats(prevMatchViewHeight,0)) {
+            if (Utils.compareFloats(prevMatchViewWidth,0) || Utils.compareFloats(prevMatchViewHeight,0)) {
         		savePreviousImageValues();
         	}
         	
@@ -803,7 +803,7 @@ public class TouchImageView extends android.support.v7.widget.AppCompatImageView
             	consumed = doubleTapListener.onDoubleTap(e);
             }
         	if (state == State.NONE) {
-                float targetZoom =  ScanUtils.compareFloats(normalizedScale,minScale)? maxScale : minScale;
+                float targetZoom =  Utils.compareFloats(normalizedScale,minScale)? maxScale : minScale;
 	        	DoubleTapZoom doubleTap = new DoubleTapZoom(targetZoom, e.getX(), e.getY(), false);
 	        	compatPostOnAnimation(doubleTap);
 	        	consumed = true;
