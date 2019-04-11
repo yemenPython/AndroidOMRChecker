@@ -378,7 +378,12 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
             mCacheBitmap.recycle();
         }
     }
+//    https://stackoverflow.com/questions/16669779/opencv-camera-orientation-issue
+    int userRotation= 0;
 
+    public void setUserRotation(int userRotation) {
+        this.userRotation = userRotation;
+    }
     /**
      * This method shall be called by the subclasses when they have valid
      * object and want it to be delivered to external client (via callback) and
@@ -410,8 +415,11 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
             Canvas canvas = getHolder().lockCanvas();
             if (canvas != null) {
                 canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
-                if (BuildConfig.DEBUG)
-                    Log.d(TAG, "mStretch value: " + mScale);
+//                if (BuildConfig.DEBUG)
+//                    Log.d(TAG, "mStretch value: " + mScale);
+
+                canvas.save();
+                canvas.rotate(userRotation,  (canvas.getWidth()/ 2f),(canvas.getHeight()/ 2f));
 
                 if (mScale != 0) {
                     canvas.drawBitmap(mCacheBitmap, new Rect(0,0,mCacheBitmap.getWidth(), mCacheBitmap.getHeight()),
@@ -431,6 +439,8 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
                     mFpsMeter.measure();
                     mFpsMeter.draw(canvas, 20, 30);
                 }
+                //remember to restore the canvas
+                canvas.restore();
                 getHolder().unlockCanvasAndPost(canvas);
             }
         }

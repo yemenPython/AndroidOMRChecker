@@ -1,7 +1,6 @@
 package com.udayraj.androidomr.activity;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
@@ -61,7 +60,7 @@ import static android.view.View.GONE;
 /**
  * This class initiates camera and detects edges on live view
  */
-public class ScanActivity extends AppCompatActivity implements IScanner, View.OnClickListener {
+public class ScanActivity extends AppCompatActivity implements IScanner {
     private static final String mOpenCvLibrary = "opencv_java3";
     static {
         System.loadLibrary(mOpenCvLibrary);
@@ -92,10 +91,13 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_scan);
+        Log.i(TAG, "called onCreate");
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        setContentView(R.layout.activity_scan);
+
         init();
     }
     private BaseLoaderCallback  mLoaderCallback = new BaseLoaderCallback(this) {
@@ -106,8 +108,6 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
                 {
                     Log.i(TAG, "OpenCV loaded successfully");
                     mOpenCvCameraView.enableView();
-                    // mOpenCvCameraView.setOnTouchListener(ScanActivity.this);
-                    mOpenCvCameraView.setOnClickListener(ScanActivity.this);
                 } break;
                 default:
                 {
@@ -145,7 +145,8 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
         containerScan = findViewById(R.id.container_scan);
         cameraPreviewLayout = findViewById(R.id.camera_preview);
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.opencv_camera_preview);
-
+        mOpenCvCameraView.setUserRotation(90);
+        mOpenCvCameraView.setMaxFrameSize(600, 600);
 
         cropImageView = findViewById(R.id.crop_image_view);
         captureHintLayout = findViewById(R.id.capture_hint_layout);
@@ -156,14 +157,21 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
         cropLayout = findViewById(R.id.crop_layout);
         cropAcceptBtn = findViewById(R.id.crop_accept_btn);
         cropRejectBtn = findViewById(R.id.crop_reject_btn);
-        cropAcceptBtn.setOnClickListener(this);
-        final AppCompatActivity context = this;
+        final Activity context = this;
+        cropAcceptBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Log.d("custom"+TAG, "Image Accepted.");
+                String path = SC.STORAGE_FOLDER;
+                Toast.makeText(context, "Saving to: " + path+SC.IMAGE_NAME, Toast.LENGTH_SHORT).show();
+                boolean success = FileUtils.saveBitmap(copyBitmap, path, SC.IMAGE_NAME);
+                resumePreview();
+            }
+        });
         cropRejectBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 resumePreview();
-                // mImageSurfaceView.cancelAutoCapture();
-                // if(mImageSurfaceView.isAutoCaptureScheduled)
                 mScanCameraViewListener.cancelAutoCapture();
                 if(mScanCameraViewListener.isAutoCaptureScheduled)
                     Toast.makeText(context, "Capture Cancelled", Toast.LENGTH_SHORT).show();
@@ -236,6 +244,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
                         ScanCanvasView scanCanvasView = new ScanCanvasView(ScanActivity.this);
                         cameraPreviewLayout.addView(scanCanvasView);
                         mScanCameraViewListener = new ScanCameraViewListener(scanCanvasView,ScanActivity.this);
+//                        mOpenCvCameraView.setCameraIndex(1);
                         mOpenCvCameraView.setCvCameraViewListener(mScanCameraViewListener);
                         mOpenCvCameraView.setVisibility(SurfaceView.VISIBLE);
                     }
@@ -349,17 +358,6 @@ public class ScanActivity extends AppCompatActivity implements IScanner, View.On
                 cropAcceptBtn.performClick();
             }
         }.start();
-    }
-
-    //        called on clicking accept button (because of : cropAcceptBtn.setOnClickListener(this);)
-    @Override
-    public void onClick(View v) {
-        Log.d("custom"+TAG, "Image Accepted.");
-        String path = SC.STORAGE_FOLDER;
-//        Toast.makeText(this, "Saving to: " + path+SC.IMAGE_NAME, Toast.LENGTH_SHORT).show();
-        boolean success = FileUtils.saveBitmap(copyBitmap, path, SC.IMAGE_NAME);
-        setResult(Activity.RESULT_OK, new Intent().putExtra(SC.SCANNED_RESULT, path));
-        resumePreview();
     }
 
     public void onDestroy() {

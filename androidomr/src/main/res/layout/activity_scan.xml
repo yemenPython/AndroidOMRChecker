@@ -7,10 +7,11 @@
     tools:context="com.udayraj.androidomr.activity.ScanActivity">
 
     <!-- First layer: camera preview-->
-    <!--<FrameLayout-->
-        <!--android:id="@+id/camera_preview"-->
-        <!--android:layout_width="match_parent"-->
-        <!--android:layout_height="match_parent" />-->
+    <FrameLayout
+        android:id="@+id/camera_preview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
     <org.opencv.android.JavaCameraView
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -68,6 +69,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
     </LinearLayout>
+
     <!-- Second (Hidden) layer: crop layout-->
     <FrameLayout
         android:id="@+id/crop_layout"

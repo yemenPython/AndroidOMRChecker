@@ -217,6 +217,7 @@ public class Utils {
 
     public static void drawContours(Mat processedMat) {
         List<MatOfPoint> contours = getTopContours(processedMat);
+        Log.d(TAG,"Contours found: "+contours.size());
         for (int i = 0; i < contours.size(); i++) {
             Imgproc.drawContours(processedMat, contours, i, new Scalar(155, 155, 155), 3);
         }

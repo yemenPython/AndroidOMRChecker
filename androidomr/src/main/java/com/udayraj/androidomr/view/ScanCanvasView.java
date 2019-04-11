@@ -22,23 +22,23 @@ public class ScanCanvasView extends View {
     private final ArrayList<ScanShape> shapes = new ArrayList<>();
     private Rect canvasRect;
     private Rect hoverRect;
-    private final int statusbarHeight;
     public Bitmap cameraBitmap;
     public Bitmap hoverBitmap;
     private boolean cameraBitmapSet=false;
     private boolean hoverBitmapSet=false;
     public ScanCanvasView(Context context) {
         super(context);
+        int statusBarHeight;
         Resources res = context.getResources();
         DisplayMetrics metrics = res.getDisplayMetrics();
         int width = metrics.widthPixels;
         int height = metrics.heightPixels;
         final int id = res.getIdentifier("status_bar_height","dimen","android");
         if(id>0)
-            statusbarHeight =  res.getDimensionPixelSize(id);
+            statusBarHeight =  res.getDimensionPixelSize(id);
         else
-            statusbarHeight = (int) Math.ceil((Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? 24 : 25) * metrics.density);
-        canvasRect = new Rect(0, (int)(statusbarHeight/2), width, (int)(height+statusbarHeight/2));
+            statusBarHeight = (int) Math.ceil((Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? 24 : 25) * metrics.density);
+        canvasRect = new Rect(0, (int)(statusBarHeight/2), width, (int)(height+statusBarHeight/2));
         // bottom-right corner
         int box_len =  (int)(width*19/40);
         int startX =  (int)(width*20/40);
