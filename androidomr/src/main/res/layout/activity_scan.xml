@@ -6,18 +6,44 @@
     android:layout_height="match_parent"
     tools:context="com.udayraj.androidomr.activity.ScanActivity">
 
-    <!-- First layer: camera preview-->
+
     <FrameLayout
         android:id="@+id/camera_preview"
         android:layout_width="match_parent"
-        android:layout_height="match_parent" />
+        android:layout_height="match_parent">
 
-    <org.opencv.android.JavaCameraView
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:id="@+id/opencv_camera_preview" />
-    <!-- Debug Button: effects preview -->
+        <org.opencv.android.JavaCameraView
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:id="@+id/java_camera_view"/>
 
+    </FrameLayout>
+
+    <!-- Second layer : Hint text -->
+    <LinearLayout
+        android:id="@+id/capture_hint_layout"
+        android:layout_width="wrap_content"
+        android:layout_height="46dp"
+        android:layout_gravity="center"
+        android:background="@drawable/hint_white"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/capture_hint_text"
+            style="@style/TextShadow"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:gravity="center"
+            android:paddingBottom="4dp"
+            android:paddingLeft="12dp"
+            android:paddingRight="12dp"
+            android:text="@string/finding_rect"
+            android:textColor="@color/white"
+            android:textSize="@dimen/text_size_18" />
+    </LinearLayout>
+    <!-- Third layer: debug buttons-->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -27,24 +53,24 @@
         android:layout_marginLeft="10dp"
         android:gravity="top|start">
 
-    <ToggleButton
-        android:id="@+id/xray_btn"
-        android:textOn="@string/xray"
-        android:textOff="@string/normal"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-    <ToggleButton
-        android:id="@+id/canny_btn"
-        android:textOn="@string/canny_on"
-        android:textOff="@string/canny_off"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
-    <ToggleButton
-        android:id="@+id/morph_btn"
-        android:textOn="@string/morph_on"
-        android:textOff="@string/morph_off"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content" />
+        <ToggleButton
+            android:id="@+id/xray_btn"
+            android:textOn="@string/xray"
+            android:textOff="@string/normal"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+        <ToggleButton
+            android:id="@+id/canny_btn"
+            android:textOn="@string/canny_on"
+            android:textOff="@string/canny_off"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
+        <ToggleButton
+            android:id="@+id/morph_btn"
+            android:textOn="@string/morph_on"
+            android:textOff="@string/morph_off"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content" />
     </LinearLayout>
     <LinearLayout
         android:layout_width="match_parent"
@@ -69,8 +95,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content" />
     </LinearLayout>
-
-    <!-- Second (Hidden) layer: crop layout-->
+    <!-- Fourth (Hidden initially) layer: crop layout-->
     <FrameLayout
         android:id="@+id/crop_layout"
         android:layout_width="match_parent"
@@ -78,23 +103,32 @@
         android:layout_gravity="center"
         android:visibility="gone">
 
-        <ImageView
-            android:id="@+id/crop_image_view"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center" />
+        <!--<ImageView-->
+            <!--android:id="@+id/crop_image_view"-->
+            <!--android:layout_width="match_parent"-->
+            <!--android:layout_height="match_parent"-->
+            <!--android:layout_gravity="center" />-->
 
-        <!--<com.udayraj.androidomr.view.PolygonView-->
+        <com.udayraj.androidomr.view.TouchImageView
+            android:id="@+id/crop_image_view"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            android:scaleType="center"
+            />
+
+    <!--<com.udayraj.androidomr.view.PolygonView-->
             <!--android:id="@+id/polygon_view"-->
             <!--android:layout_width="wrap_content"-->
             <!--android:layout_height="wrap_content"-->
             <!--android:layout_gravity="center" />-->
 
+        <!-- Final layer: Accept Reject Buttons -->
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom|center"
-            android:layout_marginBottom="20dp"
+            android:layout_gravity="bottom|end"
+            android:layout_marginBottom="40dp"
             android:gravity="center">
 
             <View
@@ -102,6 +136,20 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1" />
 
+            <TextView
+                android:id="@+id/time_elapsed_text"
+                style="@style/TextShadow"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:gravity="center"
+                android:paddingBottom="4dp"
+                android:paddingTop="12dp"
+                android:paddingLeft="12dp"
+                android:paddingRight="12dp"
+                android:text="@string/finding_rect"
+                android:textColor="@color/orange"
+                android:textSize="@dimen/text_size_18" />
             <ImageView
                 android:id="@+id/crop_accept_btn"
                 android:layout_width="50dp"
@@ -109,31 +157,18 @@
                 android:alpha="0.8"
                 android:src="@drawable/accept" />
 
-                <TextView
-                    android:id="@+id/time_elapsed_text"
-                    style="@style/TextShadow"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="center_horizontal"
-                    android:gravity="center"
-                    android:paddingBottom="4dp"
-                    android:paddingLeft="12dp"
-                    android:paddingRight="12dp"
-                    android:text="@string/finding_rect"
-                    android:textColor="@color/orange"
-                    android:textSize="@dimen/text_size_18" />
 
-            <View
-                android:layout_width="0dp"
-                android:layout_height="match_parent"
-                android:layout_weight="0.6" />
+            <!--<View-->
+                <!--android:layout_width="0dp"-->
+                <!--android:layout_height="match_parent"-->
+                <!--android:layout_weight="0.6" />-->
 
-            <ImageView
-                android:id="@+id/crop_reject_btn"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:alpha="0.8"
-                android:src="@drawable/reject" />
+            <!--<ImageView-->
+                <!--android:id="@+id/crop_reject_btn"-->
+                <!--android:layout_width="50dp"-->
+                <!--android:layout_height="50dp"-->
+                <!--android:alpha="0.8"-->
+                <!--android:src="@drawable/reject" />-->
 
             <View
                 android:layout_width="0dp"
@@ -141,28 +176,4 @@
                 android:layout_weight="1" />
         </LinearLayout>
     </FrameLayout>
-
-    <LinearLayout
-        android:id="@+id/capture_hint_layout"
-        android:layout_width="wrap_content"
-        android:layout_height="46dp"
-        android:layout_gravity="center"
-        android:background="@drawable/hint_white"
-        android:orientation="vertical"
-        android:visibility="gone">
-
-        <TextView
-            android:id="@+id/capture_hint_text"
-            style="@style/TextShadow"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center_horizontal"
-            android:gravity="center"
-            android:paddingBottom="4dp"
-            android:paddingLeft="12dp"
-            android:paddingRight="12dp"
-            android:text="@string/finding_rect"
-            android:textColor="@color/white"
-            android:textSize="@dimen/text_size_18" />
-    </LinearLayout>
 </FrameLayout>

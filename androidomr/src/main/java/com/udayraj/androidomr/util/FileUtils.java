@@ -16,7 +16,8 @@ public class FileUtils {
     }
     private static File touchFile(String folderpath, String filename) throws IOException {
         File file = new File(folderpath,filename);
-        file.createNewFile();
+        if(!file.exists())
+            file.createNewFile();
         return file;
     }
     public static void checkMakeDirs(String folderpath){

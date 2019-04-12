@@ -10,5 +10,5 @@ import com.udayraj.androidomr.enums.ScanHint;
 
 public interface IScanner {
     void displayHint(ScanHint scanHint);
-    void onPictureClicked(Bitmap bitmap);
+    // void onPictureClicked(Bitmap bitmap);
 }

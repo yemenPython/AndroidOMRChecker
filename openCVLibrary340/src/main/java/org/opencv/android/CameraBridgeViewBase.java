@@ -14,7 +14,9 @@ import android.content.DialogInterface;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
+import android.graphics.Matrix;
 import android.graphics.Rect;
+import android.hardware.Camera;
 import android.util.AttributeSet;
 import android.util.Log;
 import android.view.SurfaceHolder;
@@ -379,10 +381,41 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
         }
     }
 //    https://stackoverflow.com/questions/16669779/opencv-camera-orientation-issue
-    int userRotation= 0;
+    private final Matrix mMatrix = new Matrix();
+    // public int statusBarHeight = 0;
+// public Rect screenRect = new Rect();
 
-    public void setUserRotation(int userRotation) {
-        this.userRotation = userRotation;
+    //added updateMatrix method
+    private void updateMatrix() {
+        float hw = this.getWidth() / 2.0f;
+        float hh = (this.getHeight()) / 2.0f;
+        boolean isFrontCamera = Camera.CameraInfo.CAMERA_FACING_FRONT == mCameraIndex;
+        mMatrix.reset();
+        if (isFrontCamera) {
+            // flip mirror
+            mMatrix.preScale(-1, 1, hw, hh);
+        }
+        // mMatrix.preTranslate(0, -3*statusBarHeight);
+        mMatrix.preTranslate(hw, hh);
+        if (isFrontCamera)
+            mMatrix.preRotate(270);
+        else
+            mMatrix.preRotate(90);
+        mMatrix.preTranslate(-hw, -hh);
+    }
+
+    //then We need call updateMatrix on layout
+    @Override
+    public void layout(int l, int t, int r, int b) {
+        super.layout(l, t, r, b);
+        updateMatrix();
+    }
+
+    //I think we should also call updateMatrix on measure
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        updateMatrix();
     }
     /**
      * This method shall be called by the subclasses when they have valid
@@ -415,11 +448,11 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
             Canvas canvas = getHolder().lockCanvas();
             if (canvas != null) {
                 canvas.drawColor(0, android.graphics.PorterDuff.Mode.CLEAR);
-//                if (BuildConfig.DEBUG)
-//                    Log.d(TAG, "mStretch value: " + mScale);
-
-                canvas.save();
-                canvas.rotate(userRotation,  (canvas.getWidth()/ 2f),(canvas.getHeight()/ 2f));
+               // if (BuildConfig.DEBUG)
+               //     Log.d(TAG, "mStretch value: " + mScale);
+                //Set matrix before OpenCV draw bitmap
+                int saveCount = canvas.save();
+                canvas.setMatrix(mMatrix);
 
                 if (mScale != 0) {
                     canvas.drawBitmap(mCacheBitmap, new Rect(0,0,mCacheBitmap.getWidth(), mCacheBitmap.getHeight()),
@@ -440,7 +473,10 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
                     mFpsMeter.draw(canvas, 20, 30);
                 }
                 //remember to restore the canvas
-                canvas.restore();
+                // canvas.restore();
+                //Restore canvas after draw bitmap
+                canvas.restoreToCount(saveCount);
+
                 getHolder().unlockCanvasAndPost(canvas);
             }
         }

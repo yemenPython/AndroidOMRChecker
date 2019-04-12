@@ -217,7 +217,10 @@ public class Utils {
 
     public static void drawContours(Mat processedMat) {
         List<MatOfPoint> contours = getTopContours(processedMat);
-        Log.d(TAG,"Contours found: "+contours.size());
+        if(contours == null) {
+            Log.d(TAG, "No Contours found! ");
+            return;
+        }
         for (int i = 0; i < contours.size(); i++) {
             Imgproc.drawContours(processedMat, contours, i, new Scalar(155, 155, 155), 3);
         }
@@ -226,7 +229,8 @@ public class Utils {
     public static Mat preProcessMat(Mat mat){
         Mat processedMat = Utils.resize_util(mat, SC.uniform_width_hd, SC.uniform_height_hd);
         Imgproc.cvtColor(processedMat, processedMat, Imgproc.COLOR_BGR2GRAY, 4);
-        Imgproc.blur(processedMat, processedMat, new Size(SC.KSIZE_BLUR, SC.KSIZE_BLUR));
+        normalize(processedMat);
+        // Imgproc.blur(processedMat, processedMat, new Size(SC.KSIZE_BLUR, SC.KSIZE_BLUR));
         return processedMat;
     }
 
@@ -275,7 +279,7 @@ public class Utils {
 
         Core.MinMaxLocResult mmr = Core.minMaxLoc(matchOut);
         Point matchLoc = mmr.maxLoc;
-        Log.d("customPointLoc",""+matchLoc);
+        // Log.d("customPointLoc",""+matchLoc);
 
         return new Point[] {matchLoc};
     }
@@ -464,12 +468,16 @@ public class Utils {
     }
 
     public static Bitmap matToBitmapRotate(Mat processedMat){
-        Core.rotate(processedMat, processedMat, Core.ROTATE_90_CLOCKWISE);
         Bitmap cameraBitmap = Bitmap.createBitmap(processedMat.cols(), processedMat.rows(), Bitmap.Config.ARGB_8888);
         org.opencv.android.Utils.matToBitmap(processedMat, cameraBitmap);
-//        cameraBitmap = Utils.rotateBitmap(cameraBitmap, 90);
-        return cameraBitmap;
+        Matrix rotateMatrix = new Matrix();
+        rotateMatrix.postRotate(90);
+        // filter = true does the applyTransform here!
+        return Bitmap.createBitmap(cameraBitmap, 0, 0, cameraBitmap.getWidth(), cameraBitmap.getHeight(), rotateMatrix, true);
     }
+
+
+    //UNUSED -
     public static Bitmap rotateBitmap(Bitmap cameraBitmap, int degrees){
         Matrix matrix = new Matrix();
         matrix.postRotate(degrees);

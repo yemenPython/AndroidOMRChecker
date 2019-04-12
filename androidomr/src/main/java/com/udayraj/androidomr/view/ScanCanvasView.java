@@ -38,11 +38,12 @@ public class ScanCanvasView extends View {
             statusBarHeight =  res.getDimensionPixelSize(id);
         else
             statusBarHeight = (int) Math.ceil((Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? 24 : 25) * metrics.density);
-        canvasRect = new Rect(0, (int)(statusBarHeight/2), width, (int)(height+statusBarHeight/2));
+        canvasRect = new Rect(0, 0, width, (int)(height));
+        // canvasRect = new Rect(0, (int)(statusBarHeight/2), width, (int)(height+statusBarHeight/2));
         // bottom-right corner
         int box_len =  (int)(width*19/40);
         int startX =  (int)(width*20/40);
-        int startY =  (int)(height*28/40);
+        int startY =  (int)(height*26/40);
         hoverRect = new Rect(startX, startY, box_len + startX, box_len + startY);
     }
 
@@ -87,33 +88,26 @@ public class ScanCanvasView extends View {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        // draw the frame.
         super.onDraw(canvas);
 
-        if(hoverBitmapSet) {
-            canvas.drawBitmap(hoverBitmap, null, hoverRect, null);
-        }
-
-        if(cameraBitmapSet) {
-//            if(cameraBitmap.getWidth() != canvasRect.width() || cameraBitmap.getHeight() != canvasRect.height())
-//                cameraBitmap = Utils.resizeToScreenContentSize(cameraBitmap, canvasRect.width(),canvasRect.height());
+        // draw the bg frame first
+        if(cameraBitmapSet)
             canvas.drawBitmap(cameraBitmap, null, canvasRect, null);
-        }
-        else{
-            // allocations per draw cycle.
-            int paddingLeft = getPaddingLeft();
-            int paddingTop = getPaddingTop();
-            int paddingRight = getPaddingRight();
-            int paddingBottom = getPaddingBottom();
+        // allocations per draw cycle.
+        int paddingLeft = getPaddingLeft();
+        int paddingTop = getPaddingTop();
+        int paddingRight = getPaddingRight();
+        int paddingBottom = getPaddingBottom();
 
-            int contentWidth = getWidth() - paddingLeft - paddingRight;
-            int contentHeight = getHeight() - paddingTop - paddingBottom;
-            for (ScanShape s : shapes) {
-                s.getShape().resize(contentWidth, contentHeight);
-                s.draw(canvas);
-            }
+        int contentWidth = getWidth() - paddingLeft - paddingRight;
+        int contentHeight = getHeight() - paddingTop - paddingBottom;
+        for (ScanShape s : shapes) {
+            s.getShape().resize(contentWidth, contentHeight);
+            s.draw(canvas);
         }
 
+        if(hoverBitmapSet)
+            canvas.drawBitmap(hoverBitmap, null, hoverRect, null);
     }
 
     public void addShape(Shape shape, Paint paint, Paint border) {

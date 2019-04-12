@@ -22,7 +22,7 @@ public class SC {
     public static final int marker_scale_fac = 38;
     public static final int uniform_height_hd = (int)(1231 / 1.5);
 
-    public static final int ACCEPT_TIMER = 5000;
+    public static final int ACCEPT_TIMER = 3000;
     public static final int AUTOCAP_TIMER = 5000;
 //    TODO: link these into activity UI
     public static int CANNY_THRESHOLD_L = 35;
