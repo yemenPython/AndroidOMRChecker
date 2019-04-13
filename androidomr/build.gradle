@@ -3,14 +3,14 @@ apply plugin: 'com.github.dcendents.android-maven'
 
 group = 'com.github.udayraj123'
 android {
-    compileSdkVersion 26
+    compileSdkVersion 28
 
     packageBuildConfig false
 
 
     defaultConfig {
         minSdkVersion 16
-        targetSdkVersion 26
+        targetSdkVersion 28
         versionCode 1
         versionName "1.0"
 
@@ -33,9 +33,19 @@ android {
 
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
-    implementation 'com.android.support:appcompat-v7:26.1.0'
+    implementation 'com.android.support:appcompat-v7:27.1.1'
+    implementation  'com.nightonke:jellytogglebutton:1.0.2'
+
+
+    implementation 'com.mxn.soul:flowingdrawer-core:2.0.0'
+    implementation 'com.nineoldandroids:library:2.4.0'
+
+//    48MB to 48MB!
+    implementation 'com.github.Mohammed-Alaa:RangeSeekBar:1.0.2'
+
+    implementation project(':openCVLibrary340')
+
     testImplementation 'junit:junit:4.12'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
-    implementation project(':openCVLibrary340')
 }

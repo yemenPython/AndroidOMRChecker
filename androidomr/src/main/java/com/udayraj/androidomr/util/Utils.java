@@ -230,7 +230,8 @@ public class Utils {
         Mat processedMat = Utils.resize_util(mat, SC.uniform_width_hd, SC.uniform_height_hd);
         Imgproc.cvtColor(processedMat, processedMat, Imgproc.COLOR_BGR2GRAY, 4);
         normalize(processedMat);
-        // Imgproc.blur(processedMat, processedMat, new Size(SC.KSIZE_BLUR, SC.KSIZE_BLUR));
+        if(SC.KSIZE_BLUR > 0)
+            Imgproc.blur(processedMat, processedMat, new Size(SC.KSIZE_BLUR, SC.KSIZE_BLUR));
         return processedMat;
     }
 
@@ -463,6 +464,7 @@ public class Utils {
         return resized;
     }
     public static Mat resize_util(Mat image, int u_width) {
+        if(image.cols() == 0)return image;
         int u_height = (image.rows() * u_width)/image.cols();
         return resize_util(image,u_width,u_height);
     }

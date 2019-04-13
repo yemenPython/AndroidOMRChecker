@@ -1,5 +1,4 @@
 package com.udayraj.androidomr.activity;
-
 import android.app.Activity;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
@@ -32,6 +31,10 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
+
+import com.mohammedalaa.seekbar.RangeSeekBarView;
+import com.nightonke.jellytogglebutton.JellyToggleButton;
+
 
 import com.udayraj.androidomr.R;
 import com.udayraj.androidomr.constants.SC;
@@ -96,7 +99,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     // private ScanCameraBridgeView mImageSurfaceView;
     private FrameLayout cameraPreviewLayout;
     CameraBridgeViewBase mOpenCvCameraView;
-
+    SC configController;
 
     public boolean acceptLayoutShowing = false;
 
@@ -163,12 +166,14 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     private void init() {
 //        THIS IS CALLED EVERYTIME ACTIVITY GETS FOCUSED/RESUMED
         res = getResources();
+        configController = new SC(ScanActivity.this);
         // outermost view = containerScan
         containerScan = findViewById(R.id.container_scan);
         cameraPreviewLayout = findViewById(R.id.camera_preview);
 
         mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.java_camera_view);
-        mOpenCvCameraView.setMaxFrameSize(600, 600);
+        // mOpenCvCameraView.setMaxFrameSize(600, 600);
+        mOpenCvCameraView.enableFpsMeter();
 
         // custom implemented feature - https://stackoverflow.com/questions/16669779/opencv-camera-orientation-issue
         // mOpenCvCameraView.setUserRotation(90);
@@ -205,12 +210,14 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
         });
         
         for( int id : new int []{R.id.xray_btn,R.id.canny_btn,R.id.morph_btn,R.id.thresh_btn,R.id.contour_btn} ){
-            ToggleButton button = findViewById(id);
+            JellyToggleButton button = findViewById(id);
             button.setChecked(false);
         }
         SC.APPDATA_FOLDER = ScanActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/" + SC.IMAGES_DIR;
 
+
         markerToMatch = getOrMakeMarker();
+        Utils.logShape("markerToMatch", markerToMatch);
         getPermissionsAndStart();
     }
 
@@ -227,7 +234,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                 Log.d("custom"+TAG,"Error copying Marker to storage folder.");
         }
         else{
-            Log.d("custom"+TAG,"Marker found in storage folder");
+            Log.d("custom"+TAG,"Marker found in storage folder: "+SC.STORAGE_FOLDER);
             Toast.makeText(this, "Marker found", Toast.LENGTH_SHORT).show();
         }
 
@@ -294,6 +301,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         // internally it is a mat-
         outMat = inputFrame.rgba();
+        configController.updateConfig();
         // Utils.logShape("outMat",outMat);
         Mat processedMat = Utils.preProcessMat(outMat);
         // Core.rotate(processedMat, processedMat, Core.ROTATE_90_CLOCKWISE);
@@ -320,7 +328,6 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
             // clear the shapes
             scanCanvasView.clear();
             displayHint(ScanHint.NO_MESSAGE);
-            Utils.normalize(processedMat);
 //                    TODO : Can apply more live filters here:
             if(checkBtn(R.id.thresh_btn))
                 Utils.thresh(processedMat);
@@ -498,7 +505,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
 
                     acceptLayout.setVisibility(View.VISIBLE);
 
-                    autoCaptureTimer = new CountDownTimer(SC.AUTOCAP_TIMER, 1000) {
+                    autoCaptureTimer = new CountDownTimer(SC.AUTOCAP_TIMER * 1000, 1000) {
                         public void onTick(long millisUntilFinished) {
                             secondsLeft = Math.round((float) millisUntilFinished / 1000.0f);
                             timeElapsedText.setText( res.getString(R.string.timer_text,secondsLeft));
@@ -518,12 +525,12 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     }
     public void cancelAutoCapture() {
         if (acceptLayoutShowing) {
-            secondsLeft = 0;
             acceptLayoutShowing = false;
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
                     autoCaptureTimer.cancel();
+                    secondsLeft = 0;
                     acceptLayout.setVisibility(View.GONE);
                 }
             });
@@ -531,7 +538,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     }
 
     private Boolean checkBtn(Integer k){
-        return ((ToggleButton)findViewById(k)).isChecked();
+        return ((JellyToggleButton)findViewById(k)).isChecked();
     }
 
     public void invalidateCanvas() {

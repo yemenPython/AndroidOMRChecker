@@ -13,8 +13,8 @@
     <string name="timer_text">(%1$d s)</string>
 
     <!--Button labels-->
-    <string name="xray">X-Ray On</string>
-    <string name="normal">X-Ray Off</string>
+    <string name="xray">X-Ray</string>
+    <string name="normal">Off</string>
     <string name="canny_on">Canny</string>
     <string name="canny_off">No Canny</string>
     <string name="morph_on">Morph</string>
@@ -23,5 +23,11 @@
     <string name="thresh_off">No Thresh</string>
     <string name="contour_on">Contour</string>
     <string name="contour_off">No Cont</string>
+    <!--Slider labels-->
+    <string name="autocap_timer">Timer</string>
+    <string name="ksize_blur">BlurK</string>
+    <string name="ksize_morph">MorphK</string>
+    <string name="canny_l">Canny L</string>
+    <string name="canny_u">Canny U</string>
 
 </resources>
