@@ -387,21 +387,22 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
 
     //added updateMatrix method
     private void updateMatrix() {
-        float hw = this.getWidth() / 2.0f;
-        float hh = (this.getHeight()) / 2.0f;
-        boolean isFrontCamera = Camera.CameraInfo.CAMERA_FACING_FRONT == mCameraIndex;
-        mMatrix.reset();
-        if (isFrontCamera) {
-            // flip mirror
-            mMatrix.preScale(-1, 1, hw, hh);
-        }
-        // mMatrix.preTranslate(0, -3*statusBarHeight);
-        mMatrix.preTranslate(hw, hh);
-        if (isFrontCamera)
-            mMatrix.preRotate(270);
-        else
-            mMatrix.preRotate(90);
-        mMatrix.preTranslate(-hw, -hh);
+        return;
+        // float hw = this.getWidth() / 2.0f;
+        // float hh = (this.getHeight()) / 2.0f;
+        // boolean isFrontCamera = Camera.CameraInfo.CAMERA_FACING_FRONT == mCameraIndex;
+        // mMatrix.reset();
+        // if (isFrontCamera) {
+        //     // flip mirror
+        //     mMatrix.preScale(-1, 1, hw, hh);
+        // }
+        // // mMatrix.preTranslate(0, -3*statusBarHeight);
+        // mMatrix.preTranslate(hw, hh);
+        // if (isFrontCamera)
+        //     mMatrix.preRotate(270);
+        // else
+        //     mMatrix.preRotate(90);
+        // mMatrix.preTranslate(-hw, -hh);
     }
 
     //then We need call updateMatrix on layout
@@ -452,8 +453,8 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
                //     Log.d(TAG, "mStretch value: " + mScale);
                 //Set matrix before OpenCV draw bitmap
                 int saveCount = canvas.save();
-                canvas.setMatrix(mMatrix);
-
+                // canvas.setMatrix(mMatrix);
+                mScale = 0.1f;
                 if (mScale != 0) {
                     canvas.drawBitmap(mCacheBitmap, new Rect(0,0,mCacheBitmap.getWidth(), mCacheBitmap.getHeight()),
                          new Rect((int)((canvas.getWidth() - mScale*mCacheBitmap.getWidth()) / 2),

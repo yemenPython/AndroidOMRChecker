@@ -379,4 +379,17 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
             Log.d(TAG, "Finish processing thread");
         }
     }
+
+    //https://stackoverflow.com/questions/9723960/using-camera-led-flash-with-opencv-on-android
+    public void turnOffTheFlash() {
+        Camera.Parameters params = mCamera.getParameters();
+        params.setFlashMode(Camera.Parameters.FLASH_MODE_OFF);
+        mCamera.setParameters(params);
+    }
+
+    public void turnOnTheFlash() {
+        Camera.Parameters params = mCamera.getParameters();
+        params.setFlashMode(Camera.Parameters.FLASH_MODE_TORCH);
+        mCamera.setParameters(params);
+    }
 }

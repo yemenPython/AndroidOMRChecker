@@ -28,23 +28,25 @@ public class ScanCanvasView extends View {
     private boolean hoverBitmapSet=false;
     public ScanCanvasView(Context context) {
         super(context);
-        int statusBarHeight;
         Resources res = context.getResources();
         DisplayMetrics metrics = res.getDisplayMetrics();
         int width = metrics.widthPixels;
         int height = metrics.heightPixels;
-        final int id = res.getIdentifier("status_bar_height","dimen","android");
-        if(id>0)
-            statusBarHeight =  res.getDimensionPixelSize(id);
-        else
-            statusBarHeight = (int) Math.ceil((Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? 24 : 25) * metrics.density);
-        canvasRect = new Rect(0, 0, width, (int)(height));
+        // int statusBarHeight;
+        // final int id = res.getIdentifier("status_bar_height","dimen","android");
+        // if(id>0)
+        //     statusBarHeight =  res.getDimensionPixelSize(id);
+        // else
+        //     statusBarHeight = (int) Math.ceil((Build.VERSION.SDK_INT >= Build.VERSION_CODES.M ? 24 : 25) * metrics.density);
         // canvasRect = new Rect(0, (int)(statusBarHeight/2), width, (int)(height+statusBarHeight/2));
+
+        canvasRect = new Rect(0, 0, width, (int)(height));
         // bottom-right corner
-        int box_len =  (int)(width*19/40);
+        int box_width=  (int)(width*19/40);
+        int box_height=  (int)(height*19/40);
         int startX =  (int)(width*20/40);
-        int startY =  (int)(height*26/40);
-        hoverRect = new Rect(startX, startY, box_len + startX, box_len + startY);
+        int startY =  (int)(height*20/40);
+        hoverRect = new Rect(startX, startY, box_width + startX, box_height + startY);
     }
 
     public class ScanShape {

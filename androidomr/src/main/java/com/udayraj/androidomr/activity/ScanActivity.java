@@ -36,12 +36,14 @@ import com.mohammedalaa.seekbar.RangeSeekBarView;
 import com.nightonke.jellytogglebutton.JellyToggleButton;
 
 
+import com.nightonke.jellytogglebutton.State;
 import com.udayraj.androidomr.R;
 import com.udayraj.androidomr.constants.SC;
 import com.udayraj.androidomr.enums.ScanHint;
 import com.udayraj.androidomr.interfaces.IScanner;
 import com.udayraj.androidomr.util.FileUtils;
 import org.opencv.android.BaseLoaderCallback;
+import org.opencv.android.JavaCameraView;
 import org.opencv.android.LoaderCallbackInterface;
 import org.opencv.android.OpenCVLoader;
 
@@ -171,7 +173,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
         containerScan = findViewById(R.id.container_scan);
         cameraPreviewLayout = findViewById(R.id.camera_preview);
 
-        mOpenCvCameraView = (CameraBridgeViewBase) findViewById(R.id.java_camera_view);
+        mOpenCvCameraView = findViewById(R.id.java_camera_view);
         // mOpenCvCameraView.setMaxFrameSize(600, 600);
         mOpenCvCameraView.enableFpsMeter();
 
@@ -208,11 +210,28 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                 v.setClickable(true);
             }
         });
-        
+
         for( int id : new int []{R.id.xray_btn,R.id.canny_btn,R.id.morph_btn,R.id.thresh_btn,R.id.contour_btn} ){
             JellyToggleButton button = findViewById(id);
             button.setChecked(false);
         }
+
+        // flash functionality
+        JellyToggleButton flash = findViewById(R.id.flash_btn);
+        flash.setOnStateChangeListener(new JellyToggleButton.OnStateChangeListener() {
+            @Override
+            public void onStateChange(float process, State state, JellyToggleButton jtb) {
+                switch (state){
+                    case LEFT:
+                        ((JavaCameraView)mOpenCvCameraView).turnOffTheFlash();
+                        break;
+                    case RIGHT:
+                        ((JavaCameraView)mOpenCvCameraView).turnOnTheFlash();
+                        break;
+                }
+            }
+        });
+
         SC.APPDATA_FOLDER = ScanActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/" + SC.IMAGES_DIR;
 
 
@@ -303,6 +322,8 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
         outMat = inputFrame.rgba();
         configController.updateConfig();
         // Utils.logShape("outMat",outMat);
+        SC.CLAHE_ON = checkBtn(R.id.clahe_btn);
+        SC.GAMMA_ON = checkBtn(R.id.gamma_btn);
         Mat processedMat = Utils.preProcessMat(outMat);
         // Core.rotate(processedMat, processedMat, Core.ROTATE_90_CLOCKWISE);
 //        Utils.logShape("processedMat",processedMat);
@@ -328,7 +349,6 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
             // clear the shapes
             scanCanvasView.clear();
             displayHint(ScanHint.NO_MESSAGE);
-//                    TODO : Can apply more live filters here:
             if(checkBtn(R.id.thresh_btn))
                 Utils.thresh(processedMat);
             if(checkBtn(R.id.canny_btn))
@@ -339,6 +359,8 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                 Utils.drawContours(processedMat);
             // TODO : templateMatching output here?!
         }
+
+        // THE MEMORY CONSUMING PART :
         // rotate the bitmap for portrait
         copyBitmap = Utils.matToBitmapRotate(processedMat);
         scanCanvasView.setCameraBitmap(copyBitmap);

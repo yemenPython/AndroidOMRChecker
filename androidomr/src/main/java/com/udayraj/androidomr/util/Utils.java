@@ -21,6 +21,7 @@ import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
+import org.opencv.imgproc.CLAHE;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.utils.Converters;
 
@@ -226,12 +227,37 @@ public class Utils {
         }
     }
 
+    private static CLAHE clahe = Imgproc.createCLAHE(5.0f, new Size(8, 8));
+
+    private static byte saturate(double val) {
+        int iVal = (int) Math.round(val);
+        iVal = iVal > 255 ? 255 : (iVal < 0 ? 0 : iVal);
+        return (byte) iVal;
+    }
+
+    public static void gamma(Mat mat, double gammaValue){
+        Mat lookUpTable = new Mat(1, 256, CvType.CV_8U);
+        byte[] lookUpTableData = new byte[(int) (lookUpTable.total()*lookUpTable.channels())];
+        for (int i = 0; i < lookUpTable.cols(); i++) {
+            lookUpTableData[i] = saturate(Math.pow(i / 255.0, gammaValue) * 255.0);
+        }
+        lookUpTable.put(0, 0, lookUpTableData);
+        Core.LUT(mat, lookUpTable, mat);
+    }
     public static Mat preProcessMat(Mat mat){
         Mat processedMat = Utils.resize_util(mat, SC.uniform_width_hd, SC.uniform_height_hd);
         Imgproc.cvtColor(processedMat, processedMat, Imgproc.COLOR_BGR2GRAY, 4);
-        normalize(processedMat);
         if(SC.KSIZE_BLUR > 0)
             Imgproc.blur(processedMat, processedMat, new Size(SC.KSIZE_BLUR, SC.KSIZE_BLUR));
+
+        normalize(processedMat);
+        if(SC.CLAHE_ON)
+            clahe.apply(processedMat,processedMat);
+        if(SC.GAMMA_ON)
+            gamma(processedMat,SC.GAMMA_HIGH/100);
+        Imgproc.threshold(processedMat,processedMat,SC.TRUNC_THRESH,255,Imgproc.THRESH_TRUNC);
+        normalize(processedMat);
+
         return processedMat;
     }
 
