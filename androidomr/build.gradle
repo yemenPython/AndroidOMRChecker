@@ -34,15 +34,12 @@ android {
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation 'com.android.support:appcompat-v7:27.1.1'
+    // no significant change in app size -
     implementation  'com.nightonke:jellytogglebutton:1.0.2'
-
-
     implementation 'com.mxn.soul:flowingdrawer-core:2.0.0'
     implementation 'com.nineoldandroids:library:2.4.0'
-
-//    48MB to 48MB!
     implementation 'com.github.Mohammed-Alaa:RangeSeekBar:1.0.2'
-
+    implementation 'com.yarolegovich:lovely-dialog:1.1.0'
     implementation project(':openCVLibrary340')
 
     testImplementation 'junit:junit:4.12'

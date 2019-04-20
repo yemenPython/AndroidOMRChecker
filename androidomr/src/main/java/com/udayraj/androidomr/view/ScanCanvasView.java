@@ -32,6 +32,7 @@ public class ScanCanvasView extends View {
         DisplayMetrics metrics = res.getDisplayMetrics();
         int width = metrics.widthPixels;
         int height = metrics.heightPixels;
+
         // int statusBarHeight;
         // final int id = res.getIdentifier("status_bar_height","dimen","android");
         // if(id>0)
@@ -42,10 +43,10 @@ public class ScanCanvasView extends View {
 
         canvasRect = new Rect(0, 0, width, (int)(height));
         // bottom-right corner
-        int box_width=  (int)(width*19/40);
-        int box_height=  (int)(height*19/40);
-        int startX =  (int)(width*20/40);
-        int startY =  (int)(height*20/40);
+        int box_width=  (int)(width*16/40);
+        int box_height=  (int)(height*12/40);
+        int startX =  (int)(width*23/40);
+        int startY =  (int)(height*24/40);
         hoverRect = new Rect(startX, startY, box_width + startX, box_height + startY);
     }
 

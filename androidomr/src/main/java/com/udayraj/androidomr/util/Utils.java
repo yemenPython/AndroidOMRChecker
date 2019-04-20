@@ -6,6 +6,7 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.hardware.Camera;
 import android.util.Log;
+import android.util.Pair;
 import android.view.Display;
 import android.view.Surface;
 
@@ -19,6 +20,7 @@ import org.opencv.core.MatOfInt;
 import org.opencv.core.MatOfPoint;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
+import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.imgproc.CLAHE;
@@ -161,15 +163,15 @@ public class Utils {
     private static MatOfPoint hull2Points(MatOfInt hull, MatOfPoint contour) {
         List<Integer> indexes = hull.toList();
         List<Point> points = new ArrayList<>();
-        MatOfPoint point= new MatOfPoint();
+        List<Point> ctrList = contour.toList();
         for(Integer index:indexes) {
-            points.add(contour.toList().get(index));
+            points.add(ctrList.get(index));
         }
+        MatOfPoint point= new MatOfPoint();
         point.fromList(points);
         return point;
     }
-    private static List<MatOfPoint> getTopContours(Mat inputMat) {
-        int MAX_TOP_CONTOURS = 10;
+    private static List<MatOfPoint> getTopContours(Mat inputMat, int MAX_TOP_CONTOURS) {
         Mat mHierarchy = new Mat();
         List<MatOfPoint> mContourList = new ArrayList<>();
         //finding contours - RETR_LIST is (faster, thus) better as we are sorting by area anyway
@@ -189,10 +191,28 @@ public class Utils {
                     return Double.compare(Imgproc.contourArea(rhs),Imgproc.contourArea(lhs));
                 }
             });
-            mHullList = mHullList.subList(0, Math.min(mHullList.size(), MAX_TOP_CONTOURS));
-            return mHullList;
+            return mHullList.subList(0, Math.min(mHullList.size(), MAX_TOP_CONTOURS));
         }
         return null;
+    }
+
+    public static void drawContours(Mat processedMat) {
+        List<MatOfPoint> contours = getTopContours(processedMat,3);
+        if(contours == null) {
+            Log.d(TAG, "No Contours found! ");
+            return;
+        }
+        for (int i = 0; i < contours.size(); i++) {
+            Quadrilateral mLargestRect = findQuadrilateral(contours.get(i));
+            if(mLargestRect != null){
+                List<MatOfPoint> mList = new ArrayList<>();
+                mList.add(new MatOfPoint(mLargestRect.contour.toArray()));
+                Imgproc.drawContours(processedMat, mList, 0, new Scalar(255, 255, 255), 5);
+            }
+            else {
+                Imgproc.drawContours(processedMat, contours, i, new Scalar(155, 155, 155), 3);
+            }
+        }
     }
 
     private static int distance(Point a,Point b) {
@@ -200,8 +220,7 @@ public class Utils {
         double yDiff = a.y - b.y;
         return (int) Math.sqrt(Math.pow(xDiff,2) + Math.pow(yDiff, 2));
     }
-    private static Quadrilateral findQuadrilateral(List<MatOfPoint> mContourList) {
-        for (MatOfPoint c : mContourList) {
+    private static Quadrilateral findQuadrilateral(MatOfPoint c) {
             MatOfPoint2f c2f = new MatOfPoint2f(c.toArray());
             double peri = Imgproc.arcLength(c2f, true);
             MatOfPoint2f approx = new MatOfPoint2f();
@@ -212,22 +231,9 @@ public class Utils {
                 Point[] foundPoints = sortPoints(points);
                 return new Quadrilateral(approx, foundPoints);
             }
-        }
         return null;
     }
 
-    public static void drawContours(Mat processedMat) {
-        List<MatOfPoint> contours = getTopContours(processedMat);
-        if(contours == null) {
-            Log.d(TAG, "No Contours found! ");
-            return;
-        }
-        for (int i = 0; i < contours.size(); i++) {
-            Imgproc.drawContours(processedMat, contours, i, new Scalar(155, 155, 155), 3);
-        }
-    }
-
-    private static CLAHE clahe = Imgproc.createCLAHE(5.0f, new Size(8, 8));
 
     private static byte saturate(double val) {
         int iVal = (int) Math.round(val);
@@ -239,22 +245,26 @@ public class Utils {
         Mat lookUpTable = new Mat(1, 256, CvType.CV_8U);
         byte[] lookUpTableData = new byte[(int) (lookUpTable.total()*lookUpTable.channels())];
         for (int i = 0; i < lookUpTable.cols(); i++) {
-            lookUpTableData[i] = saturate(Math.pow(i / 255.0, gammaValue) * 255.0);
+            lookUpTableData[i] = saturate(Math.pow(i / 255f, 1f/gammaValue) * 255f);
         }
         lookUpTable.put(0, 0, lookUpTableData);
         Core.LUT(mat, lookUpTable, mat);
     }
+    private static CLAHE clahe = Imgproc.createCLAHE(1.1f, new Size(8, 8));
+
     public static Mat preProcessMat(Mat mat){
         Mat processedMat = Utils.resize_util(mat, SC.uniform_width_hd, SC.uniform_height_hd);
         Imgproc.cvtColor(processedMat, processedMat, Imgproc.COLOR_BGR2GRAY, 4);
-        if(SC.KSIZE_BLUR > 0)
+        if(SC.KSIZE_BLUR > 0) {
             Imgproc.blur(processedMat, processedMat, new Size(SC.KSIZE_BLUR, SC.KSIZE_BLUR));
-
+        }
         normalize(processedMat);
-        if(SC.CLAHE_ON)
-            clahe.apply(processedMat,processedMat);
-        if(SC.GAMMA_ON)
-            gamma(processedMat,SC.GAMMA_HIGH/100);
+        if(SC.CLAHE_ON) {
+            clahe.apply(processedMat, processedMat);
+        }
+        if(SC.GAMMA_ON) {
+            gamma(processedMat, SC.GAMMA_HIGH / 100f);
+        }
         Imgproc.threshold(processedMat,processedMat,SC.TRUNC_THRESH,255,Imgproc.THRESH_TRUNC);
         normalize(processedMat);
 
@@ -264,31 +274,39 @@ public class Utils {
     public static void normalize(Mat processedMat){
         Core.normalize(processedMat, processedMat, 0, 255, Core.NORM_MINMAX);
     }
-    public static void thresh(Mat processedMat) {
-        Imgproc.threshold(processedMat, processedMat, 150, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
-    }
+    // public static void threshBinary(Mat processedMat) {
+    //     Imgproc.threshold(processedMat, processedMat, SC.CANNY_THRESH, 255, Imgproc.THRESH_BINARY + Imgproc.THRESH_OTSU);
+    // }
     public static void canny(Mat processedMat) {
         Imgproc.Canny(processedMat, processedMat, SC.CANNY_THRESHOLD_U, SC.CANNY_THRESHOLD_L);
+        // threshBinary(processedMat);
+    }
+    private static Mat morph_kernel = new Mat(new Size(SC.KSIZE_CLOSE, SC.KSIZE_CLOSE), CvType.CV_8UC1, new Scalar(255));
+
+    public static void thresh(Mat processedMat) {
+        Imgproc.threshold(processedMat,processedMat,SC.ZERO_THRESH,255,Imgproc.THRESH_TOZERO);
     }
     public static void morph(Mat processedMat) {
-        // Close the small holes, i.e. Complete the edges on canny image
-        Mat kernel = new Mat(new Size(SC.KSIZE_CLOSE, SC.KSIZE_CLOSE), CvType.CV_8UC1, new Scalar(255));
-        Imgproc.morphologyEx(processedMat, processedMat, Imgproc.MORPH_CLOSE, kernel, new Point(-1,-1),1);
+        // Close the small holes, i.e. Complete the edges on canny image; ALSO closes stringy lines near edge of paper
+        Imgproc.morphologyEx(processedMat, processedMat, Imgproc.MORPH_CLOSE, morph_kernel, new Point(-1,-1),1);
     }
 
     public static Quadrilateral findPage(Mat inputMat) {
-        Mat processedMat = new Mat();
-        inputMat.copyTo(processedMat);
+        Mat processedMat = inputMat.clone();
         //Better results than threshold : Canny then Morph
-        canny(processedMat);
+        //EVEN BETTER : Morph then Canny!
         morph(processedMat);
+        thresh(processedMat);
+        canny(processedMat);
 
-        List<MatOfPoint> sortedContours = getTopContours(processedMat);
+        List<MatOfPoint> sortedContours = getTopContours(processedMat, 5);
         processedMat.release();
         if (null != sortedContours) {
-            Quadrilateral mLargestRect = findQuadrilateral(sortedContours);
-            if (mLargestRect != null)
-                return mLargestRect;
+            for (MatOfPoint c : sortedContours) {
+                Quadrilateral mLargestRect = findQuadrilateral(c);
+                if (mLargestRect != null)
+                    return mLargestRect;
+            }
         }
         return null;
     }
@@ -296,19 +314,70 @@ public class Utils {
     public static void logShape(String name, Mat m) {
         Log.d("custom"+TAG, "matrix: "+name+" shape: "+m.rows()+"x"+m.cols());
     }
-    public static Point[] checkForMarkers(Mat warpLevel1, Point[] points, Mat marker) {
-//        TODO FULL quadrant template matching here
-//        TODO Make this run less frequently
-        // matchOut will be a float image now!
-        Mat matchOut = new Mat(new Size(warpLevel1.cols() - marker.cols()+1,warpLevel1.rows() - marker.rows()+1 ), CvType.CV_32FC1);
-        //Template matching method : TM_CCOEFF_NORMED works best
-        Imgproc.matchTemplate(warpLevel1, marker, matchOut, Imgproc.TM_CCOEFF_NORMED);
+    public static Mat erodeSub(Mat warpLevel1){
+        Mat warpErodedSub = new Mat();
+        Imgproc.erode(warpLevel1, warpErodedSub, Imgproc.getStructuringElement(Imgproc.MORPH_RECT, new Size(5,5)), new Point(-1, -1), 5);
+        Core.subtract(warpLevel1, warpErodedSub, warpErodedSub);
+        normalize(warpErodedSub);
+        return warpErodedSub;
+    }
+    private static Pair<Point,Double> getMaxLoc(Mat warpErodedSub, Mat marker){
+            // matchOut will be a float image now!
+            Mat matchOut = new Mat(new Size(warpErodedSub.cols() - marker.cols()+1,warpErodedSub.rows() - marker.rows()+1 ), CvType.CV_32FC1);
+            //Template matching method : TM_CCOEFF_NORMED works best
+            Imgproc.matchTemplate(warpErodedSub, marker, matchOut, Imgproc.TM_CCOEFF_NORMED);
+            Core.MinMaxLocResult mmr = Core.minMaxLoc(matchOut);
+            Log.d("custom", ""+matchOut.cols()+ "x" + matchOut.rows() + " : "+mmr.maxLoc.x+","+mmr.maxLoc.y);
+            int channelNo = 0;
+            Pair<Point,Double> ret = new Pair<>(mmr.maxLoc, matchOut.get((int)mmr.maxLoc.y,(int)mmr.maxLoc.x)[channelNo]);
 
-        Core.MinMaxLocResult mmr = Core.minMaxLoc(matchOut);
-        Point matchLoc = mmr.maxLoc;
-        // Log.d("customPointLoc",""+matchLoc);
+            matchOut.release();
+            return ret;
+    }
+    public static List<Point>  checkForMarkers(Mat warpLevel1) {
+//        TODO Make this run less frequently, also check how to release List<>
 
-        return new Point[] {matchLoc};
+        Mat warpErodedSub;
+        Mat marker;
+        if(SC.ERODE_ON) {
+            warpErodedSub = erodeSub(warpLevel1);
+            marker = SC.markerEroded;
+        }
+        else {
+            warpErodedSub = warpLevel1;
+            marker = SC.markerToMatch;
+        }
+
+        int h1 = warpErodedSub.rows();
+        int w1 = warpErodedSub.cols();
+        int midh = h1/3;
+        int midw = w1/2;
+        Point[] origins = new Point[]{
+                new Point(0,0),
+                new Point(midw,0),
+                new Point(0,midh),
+                new Point(midw,midh),
+        };
+        Mat[] quads = new Mat[]{
+                warpErodedSub.submat(0,midh,0,midw),
+                warpErodedSub.submat(0,midh,midw,w1),
+                warpErodedSub.submat(midh, h1,0,midw),
+                warpErodedSub.submat(midh, h1,midw, w1)
+        };
+        List<Point> points = new ArrayList<>();
+        Pair<Point,Double> allMax = getMaxLoc(warpErodedSub,marker);
+
+        for (int k=0;k<4;k++){
+            Pair<Point,Double> localMax = getMaxLoc(quads[k],marker);
+            if((allMax.second - localMax.second) <= SC.thresholdVar){
+                localMax.first.x += origins[k].x;
+                localMax.first.y += origins[k].y;
+                points.add(localMax.first);
+            }
+            quads[k].release();
+        }
+
+        return points;
     }
 
     public static Mat four_point_transform(Mat inputMat, Point[] points) {

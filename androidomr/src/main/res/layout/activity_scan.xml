@@ -313,7 +313,29 @@
                 android:layout_marginEnd="10dp"
                 android:layout_marginRight="10dp"
                 >
-
+                <com.nightonke.jellytogglebutton.JellyToggleButton
+                    android:id="@+id/morph_btn"
+                    app:jtbJelly="lazy_tremble_body_slim_jim"
+                    app:jtbDuration="200"
+                    app:jtbLeftBackgroundColor="@android:color/black"
+                    app:jtbRightBackgroundColor="@android:color/white"
+                    app:jtbLeftTextColor="@android:color/black"
+                    app:jtbRightTextColor="@android:color/white"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    xmlns:app="http://schemas.android.com/apk/res-auto"
+                    app:jtbLeftText="@string/morph_on"
+                    app:jtbRightText="@string/normal"
+                    app:jtbLeftTextSize="15sp"
+                    app:jtbRightTextSize="15sp"
+                    app:jtbTextMarginLeft="2dp"
+                    app:jtbTextMarginRight="2dp"
+                    app:jtbTextMarginBottom="2dp"
+                    app:jtbTextMarginTop="2dp"
+                    android:layout_marginLeft="10dp"
+                    android:layout_marginStart="10dp"
+                    />
                 <com.nightonke.jellytogglebutton.JellyToggleButton
                     android:id="@+id/canny_btn"
                     app:jtbJelly="lazy_tremble_body_slim_jim"
@@ -338,29 +360,7 @@
                     android:layout_marginStart="10dp"
                     />
 
-                <com.nightonke.jellytogglebutton.JellyToggleButton
-                    android:id="@+id/morph_btn"
-                    app:jtbJelly="lazy_tremble_body_slim_jim"
-                    app:jtbDuration="200"
-                    app:jtbLeftBackgroundColor="@android:color/black"
-                    app:jtbRightBackgroundColor="@android:color/white"
-                    app:jtbLeftTextColor="@android:color/black"
-                    app:jtbRightTextColor="@android:color/white"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    xmlns:app="http://schemas.android.com/apk/res-auto"
-                    app:jtbLeftText="@string/morph_on"
-                    app:jtbRightText="@string/normal"
-                    app:jtbLeftTextSize="15sp"
-                    app:jtbRightTextSize="15sp"
-                    app:jtbTextMarginLeft="2dp"
-                    app:jtbTextMarginRight="2dp"
-                    app:jtbTextMarginBottom="2dp"
-                    app:jtbTextMarginTop="2dp"
-                    android:layout_marginLeft="10dp"
-                    android:layout_marginStart="10dp"
-                    />
+
             </LinearLayout>
             <!--Buttons row 3-->
             <LinearLayout
@@ -376,7 +376,7 @@
                 android:layout_marginRight="10dp"
                 >
                 <com.nightonke.jellytogglebutton.JellyToggleButton
-                    android:id="@+id/thresh_btn"
+                    android:id="@+id/erode_sub_btn"
                     app:jtbJelly="lazy_tremble_body_slim_jim"
                     app:jtbDuration="200"
                     app:jtbLeftBackgroundColor="@android:color/black"
@@ -387,7 +387,7 @@
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
                     xmlns:app="http://schemas.android.com/apk/res-auto"
-                    app:jtbLeftText="@string/thresh_on"
+                    app:jtbLeftText="@string/erode_sub_on"
                     app:jtbRightText="@string/normal"
                     app:jtbLeftTextSize="15sp"
                     app:jtbRightTextSize="15sp"
@@ -457,7 +457,7 @@
                         app:circleTextColor="@color/black"
                         app:circleTextSize="@dimen/value_bar_circleTextSize"
                         app:fillColor="@color/white"
-                        app:currentValue="50"
+                        app:currentValue="55"
                         app:minValue="10"
                         app:maxValue="100"
                         app:stepValue="5"
@@ -489,7 +489,7 @@
                         app:circleTextColor="@color/black"
                         app:circleTextSize="@dimen/value_bar_circleTextSize"
                         app:fillColor="@color/white"
-                        app:currentValue="130"
+                        app:currentValue="185"
                         app:minValue="100"
                         app:maxValue="240"
                         app:stepValue="5"
@@ -587,7 +587,7 @@
                         app:circleTextSize="@dimen/value_bar_circleTextSize"
                         app:fillColor="@color/white"
                         app:currentValue="150"
-                        app:minValue="50"
+                        app:minValue="100"
                         app:maxValue="300"
                         app:stepValue="10"
                         />
@@ -624,6 +624,39 @@
                         app:stepValue="10"
                         />
                 </LinearLayout>
+
+                <LinearLayout
+                    android:paddingTop="12dp"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/zero_thresh"
+                        style="@style/TextShadow"
+                        android:layout_gravity="center_horizontal"
+                        android:gravity="center"
+                        android:paddingBottom="4dp"
+                        android:paddingLeft="12dp"
+                        android:paddingRight="12dp"
+                        android:textColor="@color/yellow"
+                        android:textSize="@dimen/text_size_18" />
+                    <com.mohammedalaa.seekbar.RangeSeekBarView
+                        android:id="@+id/zero_thresh"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:barHeight="@dimen/value_bar_barHeight"
+                        app:baseColor="@color/navy"
+                        app:circleRadius="@dimen/value_bar_circleRadius"
+                        app:circleTextColor="@color/black"
+                        app:circleTextSize="@dimen/value_bar_circleTextSize"
+                        app:fillColor="@color/white"
+                        app:currentValue="55"
+                        app:minValue="0"
+                        app:maxValue="255"
+                        app:stepValue="5"
+                        />
+                </LinearLayout>
                 <LinearLayout
                     android:paddingTop="12dp"
                     android:layout_width="match_parent"
@@ -650,20 +683,25 @@
                         app:circleTextColor="@color/black"
                         app:circleTextSize="@dimen/value_bar_circleTextSize"
                         app:fillColor="@color/white"
-                        app:currentValue="2"
+                        app:currentValue="4"
                         app:minValue="1"
                         app:maxValue="8"
                         app:stepValue="1"
                         />
                 </LinearLayout>
-
-                <TextView
-                    android:layout_width="match_parent"
+                <Button
+                    android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    android:id="@+id/storage_btn"
+                    android:text="@string/storage_folder"
+                    />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
                     android:fontFamily="Roboto-bold"
                     android:textColor="@color/dark_green"
                     android:text="@string/signature"
-                    android:layout_gravity="bottom"
                     />
             </LinearLayout>
 

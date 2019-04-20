@@ -380,44 +380,6 @@ public abstract class CameraBridgeViewBase extends SurfaceView implements Surfac
             mCacheBitmap.recycle();
         }
     }
-//    https://stackoverflow.com/questions/16669779/opencv-camera-orientation-issue
-    private final Matrix mMatrix = new Matrix();
-    // public int statusBarHeight = 0;
-// public Rect screenRect = new Rect();
-
-    //added updateMatrix method
-    private void updateMatrix() {
-        return;
-        // float hw = this.getWidth() / 2.0f;
-        // float hh = (this.getHeight()) / 2.0f;
-        // boolean isFrontCamera = Camera.CameraInfo.CAMERA_FACING_FRONT == mCameraIndex;
-        // mMatrix.reset();
-        // if (isFrontCamera) {
-        //     // flip mirror
-        //     mMatrix.preScale(-1, 1, hw, hh);
-        // }
-        // // mMatrix.preTranslate(0, -3*statusBarHeight);
-        // mMatrix.preTranslate(hw, hh);
-        // if (isFrontCamera)
-        //     mMatrix.preRotate(270);
-        // else
-        //     mMatrix.preRotate(90);
-        // mMatrix.preTranslate(-hw, -hh);
-    }
-
-    //then We need call updateMatrix on layout
-    @Override
-    public void layout(int l, int t, int r, int b) {
-        super.layout(l, t, r, b);
-        updateMatrix();
-    }
-
-    //I think we should also call updateMatrix on measure
-    @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        updateMatrix();
-    }
     /**
      * This method shall be called by the subclasses when they have valid
      * object and want it to be delivered to external client (via callback) and

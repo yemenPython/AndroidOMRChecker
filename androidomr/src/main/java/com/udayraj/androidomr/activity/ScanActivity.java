@@ -1,17 +1,13 @@
 package com.udayraj.androidomr.activity;
-import android.app.Activity;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.Rect;
 import android.graphics.drawable.shapes.PathShape;
-import android.hardware.Camera;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.CountDownTimer;
@@ -19,20 +15,17 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.transition.TransitionManager;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
-import android.widget.CompoundButton;
+import android.widget.Button;
 import android.widget.FrameLayout;
-import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import com.yarolegovich.lovelydialog.LovelyTextInputDialog;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
-import com.mohammedalaa.seekbar.RangeSeekBarView;
 import com.nightonke.jellytogglebutton.JellyToggleButton;
 
 
@@ -42,10 +35,8 @@ import com.udayraj.androidomr.constants.SC;
 import com.udayraj.androidomr.enums.ScanHint;
 import com.udayraj.androidomr.interfaces.IScanner;
 import com.udayraj.androidomr.util.FileUtils;
-import org.opencv.android.BaseLoaderCallback;
+
 import org.opencv.android.JavaCameraView;
-import org.opencv.android.LoaderCallbackInterface;
-import org.opencv.android.OpenCVLoader;
 
 import com.udayraj.androidomr.util.ImageDetectionProperties;
 import com.udayraj.androidomr.util.Utils;
@@ -56,8 +47,6 @@ import android.view.SurfaceView;
 import com.udayraj.androidomr.view.Quadrilateral;
 import com.udayraj.androidomr.view.ScanCanvasView;
 
-import org.opencv.core.Core;
-import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.core.Point;
 import org.opencv.core.Scalar;
@@ -66,10 +55,7 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static android.view.View.GONE;
 
@@ -91,6 +77,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
             android.Manifest.permission.CAMERA
     };
     private Bitmap copyBitmap;
+    private Bitmap saveBitmap;
     private ViewGroup containerScan;
     private FrameLayout acceptLayout;
     private LinearLayout captureHintLayout;
@@ -111,7 +98,6 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     private boolean isCapturing = false;
 
     private Mat outMat;
-    private Mat markerToMatch;
 
     /** Called when the activity is first created. */
     @Override
@@ -126,22 +112,23 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
 
         init();
     }
-    private BaseLoaderCallback  mLoaderCallback = new BaseLoaderCallback(this) {
-        @Override
-        public void onManagerConnected(int status) {
-            switch (status) {
-                case LoaderCallbackInterface.SUCCESS:
-                {
-                    Log.i(TAG, "OpenCV loaded successfully");
-                    mOpenCvCameraView.enableView();
-                } break;
-                default:
-                {
-                    super.onManagerConnected(status);
-                } break;
-            }
-        }
-    };
+
+    // private BaseLoaderCallback  mLoaderCallback = new BaseLoaderCallback(this) {
+    //     @Override
+    //     public void onManagerConnected(int status) {
+    //         switch (status) {
+    //             case LoaderCallbackInterface.SUCCESS:
+    //             {
+    //                 Log.i(TAG, "OpenCV loaded successfully");
+    //                 mOpenCvCameraView.enableView();
+    //             } break;
+    //             default:
+    //             {
+    //                 super.onManagerConnected(status);
+    //             } break;
+    //         }
+    //     }
+    // };
 
     @Override
     public void onPause()
@@ -156,13 +143,17 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     public void onResume()
     {
         super.onResume();
-        if (!OpenCVLoader.initDebug()) {
-            Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
-            OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
-        } else {
-            Log.d(TAG, "OpenCV library found inside package. Using it!");
-            mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
-        }
+
+        Log.i(TAG, "OpenCV loaded successfully");
+        mOpenCvCameraView.enableView();
+
+        // if (!OpenCVLoader.initDebug()) {
+        //     Log.d(TAG, "Internal OpenCV library not found. Using OpenCV Manager for initialization");
+        //     OpenCVLoader.initAsync(OpenCVLoader.OPENCV_VERSION_3_0_0, this, mLoaderCallback);
+        // } else {
+        //     Log.d(TAG, "OpenCV library found inside package. Using it!");
+        //     mLoaderCallback.onManagerConnected(LoaderCallbackInterface.SUCCESS);
+        // }
     }
 
     private void init() {
@@ -174,7 +165,10 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
         cameraPreviewLayout = findViewById(R.id.camera_preview);
 
         mOpenCvCameraView = findViewById(R.id.java_camera_view);
-        // mOpenCvCameraView.setMaxFrameSize(600, 600);
+
+        // Not much change in FPS! cool! : 1072x1072
+        // mOpenCvCameraView.setMaxFrameSize(3000, 3000);
+
         mOpenCvCameraView.enableFpsMeter();
 
         // custom implemented feature - https://stackoverflow.com/questions/16669779/opencv-camera-orientation-issue
@@ -187,7 +181,6 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
         // Contains the accept/reject buttons -
         acceptLayout = findViewById(R.id.crop_layout);
         cropAcceptBtn = findViewById(R.id.crop_accept_btn);
-        final Activity context = this;
         cropAcceptBtn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -195,24 +188,25 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                 v.setClickable(false);
                 Log.d("custom"+TAG, "Image Accepted.");
                 String path = SC.STORAGE_FOLDER;
-                cancelAutoCapture();
-                Toast.makeText(context, "Saving to: " + path+SC.IMAGE_NAME, Toast.LENGTH_SHORT).show();
+                Toast.makeText(ScanActivity.this, "Saving to: " + path+SC.IMAGE_NAME, Toast.LENGTH_SHORT).show();
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        boolean success = FileUtils.saveBitmap(copyBitmap, SC.STORAGE_FOLDER, SC.IMAGE_NAME);
+                        boolean success = FileUtils.saveBitmap(saveBitmap, SC.STORAGE_FOLDER, SC.IMAGE_NAME);
                         Log.d("custom"+TAG, "Image Saved.");
                     }
 
                 }).start();
                 Log.d("custom"+TAG, "Save Thread started.");
+                cancelAutoCapture();
                 v.setEnabled(true);
                 v.setClickable(true);
             }
         });
 
-        for( int id : new int []{R.id.xray_btn,R.id.canny_btn,R.id.morph_btn,R.id.thresh_btn,R.id.contour_btn} ){
+        for( int id : new int []{R.id.xray_btn,R.id.canny_btn,R.id.morph_btn,R.id.erode_sub_btn,R.id.contour_btn} ){
             JellyToggleButton button = findViewById(id);
+            cancelAutoCapture();
             button.setChecked(false);
         }
 
@@ -232,15 +226,45 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
             }
         });
 
+
+        Button storage_btn = findViewById(R.id.storage_btn);
+        storage_btn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+
+                v.setEnabled(false);
+                v.setClickable(false);
+                new LovelyTextInputDialog(ScanActivity.this, R.style.TintTheme)
+                        .setTopColorRes(R.color.dark_gray)
+                        .setTitle(R.string.storage_folder)
+                        .setIcon(R.drawable.ic_storage)
+                        .setInitialInput(SC.STORAGE_FOLDER)
+                        .setInputFilter(R.string.storage_invalid, new LovelyTextInputDialog.TextFilter() {
+                            @Override
+                            public boolean check(String text) {
+                                return text.matches("[/\\w\\d]+");
+                            }
+                        })
+                        .setConfirmButton(android.R.string.ok, new LovelyTextInputDialog.OnTextInputConfirmListener() {
+                            @Override
+                            public void onTextInputConfirmed(String text) {
+                                Log.d(TAG,"Received text: "+text);
+                                Toast.makeText(ScanActivity.this, text, Toast.LENGTH_SHORT).show();
+                            }
+                        })
+                        .show();
+
+                v.setEnabled(true);
+                v.setClickable(true);
+            }
+        });
         SC.APPDATA_FOLDER = ScanActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/" + SC.IMAGES_DIR;
 
-
-        markerToMatch = getOrMakeMarker();
-        Utils.logShape("markerToMatch", markerToMatch);
+        getOrMakeMarker();
         getPermissionsAndStart();
     }
 
-    private Mat getOrMakeMarker() {
+    private void getOrMakeMarker() {
         File mFile = new File (SC.STORAGE_FOLDER, SC.MARKER_NAME);
         if(! mFile.exists()){
             Bitmap bm = BitmapFactory.decodeResource( getResources(), R.drawable.default_omr_marker);
@@ -257,7 +281,10 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
             Toast.makeText(this, "Marker found", Toast.LENGTH_SHORT).show();
         }
 
-        return Utils.resize_util(Imgcodecs.imread(mFile.getAbsolutePath(),Imgcodecs.IMREAD_GRAYSCALE), (int) SC.uniform_width_hd/SC.marker_scale_fac);
+        SC.markerToMatch = Utils.resize_util(Imgcodecs.imread(mFile.getAbsolutePath(),Imgcodecs.IMREAD_GRAYSCALE), (int) SC.uniform_width_hd/SC.marker_scale_fac);
+        Imgproc.blur(SC.markerToMatch, SC.markerToMatch, new Size(2,2));
+        SC.markerEroded = Utils.erodeSub(SC.markerToMatch);
+        Utils.logShape("markerToMatch", SC.markerToMatch);
     }
     //TODO: make PermissionHandler and put this inside
     public boolean hasAllPermissions() {
@@ -324,6 +351,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
         // Utils.logShape("outMat",outMat);
         SC.CLAHE_ON = checkBtn(R.id.clahe_btn);
         SC.GAMMA_ON = checkBtn(R.id.gamma_btn);
+        SC.ERODE_ON = checkBtn(R.id.erode_sub_btn);
         Mat processedMat = Utils.preProcessMat(outMat);
         // Core.rotate(processedMat, processedMat, Core.ROTATE_90_CLOCKWISE);
 //        Utils.logShape("processedMat",processedMat);
@@ -331,30 +359,33 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
         scanCanvasView.unsetHoverBitmap();
         if (!checkBtn(R.id.xray_btn)) {
             try {
-                Quadrilateral largestQuad = Utils.findPage(processedMat);
-                if (null != largestQuad) {
+                Quadrilateral page = Utils.findPage(processedMat);
+                if (null != page) {
                     Size originalPreviewSize = processedMat.size();
                     int originalPreviewArea = processedMat.rows() * processedMat.cols();
-                    double contourArea = Math.abs(Imgproc.contourArea(largestQuad.contour));
-                    guidedDrawRect(processedMat, largestQuad.points, contourArea, originalPreviewSize, originalPreviewArea);
+                    double contourArea = Math.abs(Imgproc.contourArea(page.contour));
+                    guidedDrawRect(processedMat, page.points, contourArea, originalPreviewSize, originalPreviewArea);
                 } else {
                     displayHint(ScanHint.FIND_RECT);
+                    cancelAutoCapture();
                 }
             } catch (Exception e) {
                 Log.d(TAG, "Uh oh.. Camera error?", e);
-                displayHint(ScanHint.FIND_RECT);
+                displayHint(ScanHint.ERROR_RECT);
+                cancelAutoCapture();
             }
         }
         else{
             // clear the shapes
             scanCanvasView.clear();
             displayHint(ScanHint.NO_MESSAGE);
-            if(checkBtn(R.id.thresh_btn))
-                Utils.thresh(processedMat);
-            if(checkBtn(R.id.canny_btn))
-                Utils.canny(processedMat);
             if(checkBtn(R.id.morph_btn))
                 Utils.morph(processedMat);
+
+            Utils.thresh(processedMat);
+
+            if(checkBtn(R.id.canny_btn))
+                Utils.canny(processedMat);
             if(checkBtn(R.id.contour_btn))
                 Utils.drawContours(processedMat);
             // TODO : templateMatching output here?!
@@ -372,22 +403,9 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     }
 
     private void guidedDrawRect(Mat processedMat, Point[] points, double contourArea, Size stdSize, int previewArea) {
-        Path path = new Path();
         // ATTENTION: axes are swapped
         float previewWidth = (float) stdSize.height;
         float previewHeight = (float) stdSize.width;
-
-        //Points are drawn in anticlockwise direction
-        path.moveTo(previewWidth - (float) points[0].y, (float) points[0].x);
-        path.lineTo(previewWidth - (float) points[1].y, (float) points[1].x);
-        path.lineTo(previewWidth - (float) points[2].y, (float) points[2].x);
-        path.lineTo(previewWidth - (float) points[3].y, (float) points[3].x);
-        path.close();
-
-        PathShape newBox = new PathShape(path, previewWidth, previewHeight);
-        Paint paint = new Paint();
-        Paint border = new Paint();
-
         //Height calculated on Y axis
         double resultHeight = Math.max(points[1].x - points[0].x, points[2].x - points[3].x);
         //Width calculated on X axis
@@ -424,37 +442,39 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                 scanHint = ScanHint.ADJUST_ANGLE;
             }
             else {
-                boolean success = true;
-                try {
-                    Mat warpLevel1 = Utils.four_point_transform(processedMat, points);
-                    Point[] markerPts = Utils.checkForMarkers(warpLevel1, points, markerToMatch);
-                    for( Point matchLoc : markerPts) {
-                        //Draw rectangle on result image
-                        Imgproc.rectangle(warpLevel1, matchLoc, new Point(matchLoc.x + markerToMatch.cols(), matchLoc.y + markerToMatch.rows()), new Scalar(5, 5, 5), 4);
-                    }
-                    Bitmap cameraBitmap = Utils.matToBitmapRotate(warpLevel1);
-                    scanCanvasView.setHoverBitmap(cameraBitmap);
-                }
-                catch(Exception e) {
-                    Log.d(TAG,"Marker prob",e);
-                    success = false;
-                }
+                Mat warpLevel1 = Utils.four_point_transform(processedMat, points);
+                Bitmap saveBitmap1 = Utils.matToBitmapRotate(warpLevel1);
 
-                if(success){
-                    // markers found too
-                    scanHint = ScanHint.CAPTURING_IMAGE;
-                    tryAutoCapture(scanHint);
+                List<Point> markerPts = Utils.checkForMarkers(warpLevel1);
+                for( Point matchLoc : markerPts) {
+                    //Draw rectangle on result image
+                    Imgproc.rectangle(warpLevel1, matchLoc, new Point(matchLoc.x + SC.markerToMatch.cols(), matchLoc.y + SC.markerToMatch.rows()), new Scalar(5, 5, 5), 4);
+                }
+                Bitmap cameraBitmap = Utils.matToBitmapRotate(warpLevel1);
+                scanCanvasView.setHoverBitmap(cameraBitmap);
+                if((markerPts.size() != 4)){
+                    // cancelAutoCapture(); <-- bug prone!
+                    scanHint = ScanHint.HOLD_STILL;
                 }
                 else{
-                    cancelAutoCapture();
-                    scanHint = ScanHint.FIND_MARKERS;
+                    scanHint = ScanHint.CAPTURING_IMAGE;
+                    saveBitmap = saveBitmap1;
+                    tryAutoCapture(scanHint);
                 }
             }
         }
-//        Log.i(TAG," Area: " + contourArea +
-//                " Preview Area: "+ previewArea +
-//                " ROI Area: " + Math.round(100 *  contourArea / previewArea)+"%" +
-//                " Label: " + scanHint.toString());
+        
+        Path path = new Path();
+        //Points are drawn in anticlockwise direction
+        path.moveTo(previewWidth - (float) points[0].y, (float) points[0].x);
+        path.lineTo(previewWidth - (float) points[1].y, (float) points[1].x);
+        path.lineTo(previewWidth - (float) points[2].y, (float) points[2].x);
+        path.lineTo(previewWidth - (float) points[3].y, (float) points[3].x);
+        path.close();
+
+        PathShape newBox = new PathShape(path, previewWidth, previewHeight);
+        Paint paint = new Paint();
+        Paint border = new Paint();
 
         border.setStrokeWidth(7);
         displayHint(scanHint);
@@ -473,6 +493,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
             case MOVE_CLOSER:
             case MOVE_AWAY:
             case ADJUST_ANGLE:
+            case ERROR_RECT:
                 paintColor = Color.argb(30, 255, 38, 0);
                 borderColor = Color.rgb(255, 38, 0);
                 break;
@@ -536,6 +557,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                         public void onFinish() {
                             secondsLeft = 0;
                             acceptLayoutShowing = false;
+                            acceptLayout.setVisibility(View.GONE);
                             timeElapsedText.setText( res.getString(R.string.timer_text,0));
                             autoCapture(scanHint);
                         }
@@ -547,10 +569,10 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     }
     public void cancelAutoCapture() {
         if (acceptLayoutShowing) {
-            acceptLayoutShowing = false;
             runOnUiThread(new Runnable() {
                 @Override
                 public void run() {
+                    acceptLayoutShowing = false;
                     autoCaptureTimer.cancel();
                     secondsLeft = 0;
                     acceptLayout.setVisibility(View.GONE);
@@ -571,6 +593,10 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     // After invoking this the frames will start to be delivered to client via the onCameraFrame() callback.
     public void onCameraViewStarted(int width, int height) {
         Log.d(TAG, "onCameraViewStarted ");
+
+        Size f = ((JavaCameraView)mOpenCvCameraView).frameSize;
+        Toast.makeText(ScanActivity.this, "Camera frame size: " + (int)f.width + "x" + (int)f.height, Toast.LENGTH_SHORT).show();
+        Log.d(TAG, "Resolution Used: " + f.width + "x" + f.height);
     }
 
     public void onCameraViewStopped() {
@@ -599,17 +625,21 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                     captureHintText.setText(res.getString(R.string.adjust_angle));
                     captureHintLayout.setBackground(res.getDrawable(R.drawable.hint_red));
                     break;
+                case ERROR_RECT:
+                    captureHintText.setText(res.getString(R.string.error_rect));
+                    captureHintLayout.setBackground(res.getDrawable(R.drawable.hint_red));
+                    break;
                 case FIND_RECT:
                     captureHintText.setText(res.getString(R.string.finding_rect));
                     captureHintLayout.setBackground(res.getDrawable(R.drawable.hint_white));
                     break;
-                case CAPTURING_IMAGE:
+                case HOLD_STILL:
                     captureHintText.setText(res.getString(R.string.hold_still));
                     captureHintLayout.setBackground(res.getDrawable(R.drawable.hint_green));
                     break;
-                case FIND_MARKERS:
-                    captureHintText.setText(res.getString(R.string.find_marker));
-                    captureHintLayout.setBackground(res.getDrawable(R.drawable.hint_white));
+                case CAPTURING_IMAGE:
+                    captureHintText.setText(res.getString(R.string.capturing));
+                    captureHintLayout.setBackground(res.getDrawable(R.drawable.hint_green));
                     break;
                 case NO_MESSAGE:
                     captureHintLayout.setVisibility(GONE);

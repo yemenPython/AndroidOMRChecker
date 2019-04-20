@@ -50,12 +50,10 @@ public class ImageDetectionProperties {
         return resultHeight / previewHeight > 0.9;
     }
 
-    public boolean isDetectedAreaAboveLimit() {
-        return resultArea > previewArea * 0.85;
-    }
+    public boolean isDetectedAreaAboveLimit() { return resultArea > previewArea * 0.90; }
 
     public boolean isDetectedAreaBelowLimits() {
-        return resultArea < previewArea * 0.10;
+        return resultArea < previewArea * 0.25;
     }
 
     public boolean isAngleNotCorrect(Point[] approx) {
