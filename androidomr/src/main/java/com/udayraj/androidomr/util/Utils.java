@@ -380,6 +380,18 @@ public class Utils {
         return points;
     }
 
+    public static Mat four_point_transform_scaled(Mat outMat, Mat inputMat, Point[] points) {
+        float scaleW = outMat.cols()/(float)inputMat.cols();
+        float scaleH = outMat.rows()/(float)inputMat.rows();
+        Point[] scaled_pts = new Point[] {
+                new Point(points[0].x*scaleW, points[0].y*scaleH),
+                new Point(points[1].x*scaleW, points[1].y*scaleH),
+                new Point(points[2].x*scaleW, points[2].y*scaleH),
+                new Point(points[3].x*scaleW, points[3].y*scaleH)
+        };
+        return four_point_transform(outMat,scaled_pts);
+    }
+
     public static Mat four_point_transform(Mat inputMat, Point[] points) {
         // points are wrt Mat indices _// (as Returned by approxPolyDP for eg) (x+Mat.cols() used in template matching)
         //obtain a consistent order of the points : (tl, tr, br, bl)

@@ -347,6 +347,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         // internally it is a mat-
         outMat = inputFrame.rgba();
+        // outMat = inputFrame.gray(); <-- TOO SLOW!
         configController.updateConfig();
         // Utils.logShape("outMat",outMat);
         SC.CLAHE_ON = checkBtn(R.id.clahe_btn);
@@ -443,7 +444,6 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
             }
             else {
                 Mat warpLevel1 = Utils.four_point_transform(processedMat, points);
-                Bitmap saveBitmap1 = Utils.matToBitmapRotate(warpLevel1);
 
                 List<Point> markerPts = Utils.checkForMarkers(warpLevel1);
                 for( Point matchLoc : markerPts) {
@@ -458,7 +458,8 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                 }
                 else{
                     scanHint = ScanHint.CAPTURING_IMAGE;
-                    saveBitmap = saveBitmap1;
+                    Mat warpOriginal = Utils.four_point_transform_scaled(outMat, processedMat, points);
+                    saveBitmap =  Utils.matToBitmapRotate(warpOriginal);
                     tryAutoCapture(scanHint);
                 }
             }
