@@ -187,17 +187,18 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                 v.setEnabled(false);
                 v.setClickable(false);
                 Log.d("custom"+TAG, "Image Accepted.");
-                String path = SC.STORAGE_FOLDER;
-                Toast.makeText(ScanActivity.this, "Saving to: " + path+SC.IMAGE_NAME, Toast.LENGTH_SHORT).show();
+                final String IMAGE_NAME = SC.IMAGE_PREFIX + "_" +SC.IMAGE_CTR+".jpg";
+                Toast.makeText(ScanActivity.this, "Saving to: " + IMAGE_NAME, Toast.LENGTH_SHORT).show();
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        boolean success = FileUtils.saveBitmap(saveBitmap, SC.STORAGE_FOLDER, SC.IMAGE_NAME);
+                        FileUtils.checkMakeDirs(SC.CURR_FOLDER);
+                        boolean success = FileUtils.saveBitmap(saveBitmap, SC.CURR_FOLDER, IMAGE_NAME);
                         Log.d("custom"+TAG, "Image Saved.");
                     }
-
                 }).start();
                 Log.d("custom"+TAG, "Save Thread started.");
+                SC.IMAGE_CTR++;
                 cancelAutoCapture();
                 v.setEnabled(true);
                 v.setClickable(true);
@@ -228,6 +229,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
 
 
         Button storage_btn = findViewById(R.id.storage_btn);
+        final int IMAGE_CTR = SC.IMAGE_CTR;
         storage_btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -238,18 +240,36 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                         .setTopColorRes(R.color.dark_gray)
                         .setTitle(R.string.storage_folder)
                         .setIcon(R.drawable.ic_storage)
-                        .setInitialInput(SC.STORAGE_FOLDER)
+                        .setInitialInput(SC.INPUT_DIR+SC.IMAGE_PREFIX)
+                        .setHint(getString(R.string.storage_hint,IMAGE_CTR))
                         .setInputFilter(R.string.storage_invalid, new LovelyTextInputDialog.TextFilter() {
                             @Override
                             public boolean check(String text) {
-                                return text.matches("[/\\w\\d]+");
+                                return text.matches("[\\w\\d]+[/\\w\\d]*");
                             }
                         })
                         .setConfirmButton(android.R.string.ok, new LovelyTextInputDialog.OnTextInputConfirmListener() {
                             @Override
                             public void onTextInputConfirmed(String text) {
                                 Log.d(TAG,"Received text: "+text);
-                                Toast.makeText(ScanActivity.this, text, Toast.LENGTH_SHORT).show();
+                                if(!text.endsWith("/"))
+                                    text+="/";
+                                String [] splits = text.split("/");
+                                String tmp = "";
+                                SC.INPUT_DIR = splits[0]+"/";
+                                int ctr=0;
+                                for(String s : splits){
+                                    tmp += s;
+                                    ctr++;
+                                    if(ctr == splits.length-1){
+                                        SC.INPUT_DIR = tmp+"/";
+                                    }
+                                    if(ctr == splits.length){
+                                        SC.IMAGE_PREFIX = s;
+                                    }
+                                }
+                                SC.CURR_FOLDER =  SC.STORAGE_HOME +"/" + SC.INPUT_DIR;
+                                Toast.makeText(ScanActivity.this, SC.INPUT_DIR+":"+SC.IMAGE_PREFIX, Toast.LENGTH_SHORT).show();
                             }
                         })
                         .show();
@@ -258,7 +278,6 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                 v.setClickable(true);
             }
         });
-        SC.APPDATA_FOLDER = ScanActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/" + SC.IMAGES_DIR;
 
         getOrMakeMarker();
         getPermissionsAndStart();
@@ -278,7 +297,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
         }
         else{
             Log.d("custom"+TAG,"Marker found in storage folder: "+SC.STORAGE_FOLDER);
-            Toast.makeText(this, "Marker found", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Marker Loaded from: "+SC.MARKER_DIR, Toast.LENGTH_SHORT).show();
         }
 
         SC.markerToMatch = Utils.resize_util(Imgcodecs.imread(mFile.getAbsolutePath(),Imgcodecs.IMREAD_GRAYSCALE), (int) SC.uniform_width_hd/SC.marker_scale_fac);
@@ -338,7 +357,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     }
     private void onStorageGranted() {
         // create intermediate directories
-        FileUtils.checkMakeDirs(SC.APPDATA_FOLDER);
+        // FileUtils.checkMakeDirs(SC.APPDATA_FOLDER);
         FileUtils.checkMakeDirs(SC.STORAGE_FOLDER);
     }
 

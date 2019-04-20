@@ -36,8 +36,8 @@ public class MainActivity extends AppCompatActivity {
         if (requestCode == REQUEST_CODE) {
             if(resultCode == Activity.RESULT_OK) {
                 if(null != data && null != data.getExtras()) {
-                    String filePath = data.getExtras().getString(SC.SCANNED_RESULT);
-                    Bitmap baseBitmap = Utils.decodeBitmapFromFile(filePath, SC.IMAGE_NAME);
+                    String filePath = data.getExtras().getString("scannedResult");
+                    Bitmap baseBitmap = Utils.decodeBitmapFromFile(filePath, "image");
                     scannedImageView.setScaleType(ImageView.ScaleType.FIT_CENTER);
                     scannedImageView.setImageBitmap(baseBitmap);
                 }

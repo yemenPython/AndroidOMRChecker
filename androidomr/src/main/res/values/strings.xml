@@ -24,7 +24,9 @@
     <string name="clahe_on">Clahe</string>
     <string name="gamma_on">Gamma</string>
     <string name="normal">Off</string>
-    <string name="storage_folder">Storage Folder</string>
+    <string name="storage_btn">Path</string>
+    <string name="storage_folder">Storage Path Prefix</string>
+    <string name="storage_hint">Suffix \'_%1$d.jpg\' will be added automatically</string>
     <string name="storage_invalid">Invalid Path!</string>
 
 

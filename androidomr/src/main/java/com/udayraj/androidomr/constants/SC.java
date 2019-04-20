@@ -18,18 +18,22 @@ import org.opencv.core.Mat;
 public class SC {
     private static final String TAG = SC.class.getSimpleName();
 
-    public static final String SCANNED_RESULT = "scannedResult";
-    public static final String IMAGES_DIR = "OMRTechno/";
-    public static final String IMAGE_NAME = "image.jpg";
     public static final String MARKER_NAME = "omr_marker.jpg";
-    //    This one doesn't need context
-    public static final String STORAGE_FOLDER=  Environment.getExternalStorageDirectory().getAbsolutePath() +"/" + IMAGES_DIR;
-    //    this needs string
-    public static String APPDATA_FOLDER;
+    public static final String STORAGE_HOME =  Environment.getExternalStorageDirectory().getAbsolutePath() +"/";
+    public static final String MARKER_DIR = "OMRTechno/";
+    public static final String STORAGE_FOLDER =  STORAGE_HOME + MARKER_DIR;
+    public static String INPUT_DIR = "OMRTechno/";
+    public static String IMAGE_PREFIX = "omr";
+    public static String CURR_FOLDER =  STORAGE_HOME + INPUT_DIR;
+    public static int IMAGE_CTR = 1;
 
-    public static final int uniform_width_hd = (int) (1000 / 1.5);
+    //    this needs string
+    // public static String APPDATA_FOLDER;
+    // SC.APPDATA_FOLDER = ScanActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/" + SC.IMAGES_DIR;
+
+    public static final int uniform_width_hd = (int) (1000 / 1.75);
     public static final int marker_scale_fac = 38;
-    public static final int uniform_height_hd = (int)(1231 / 1.5);
+    public static final int uniform_height_hd = (int)(1231 / 1.75);
     public static final double thresholdVar = 0.3;
 
     public static int AUTOCAP_TIMER = 3; // will be multiplied by 1000
