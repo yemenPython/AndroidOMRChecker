@@ -254,7 +254,6 @@ public class Utils {
 
     public static Mat preProcessMat(Mat mat){
         Mat processedMat = Utils.resize_util(mat, SC.uniform_width_hd, SC.uniform_height_hd);
-        Imgproc.cvtColor(processedMat, processedMat, Imgproc.COLOR_BGR2GRAY, 4);
         if(SC.KSIZE_BLUR > 0) {
             Imgproc.blur(processedMat, processedMat, new Size(SC.KSIZE_BLUR, SC.KSIZE_BLUR));
         }
@@ -293,7 +292,7 @@ public class Utils {
 
     public static Quadrilateral findPage(Mat inputMat) {
         Mat processedMat = inputMat.clone();
-        //Better results than threshold : Canny then Morph
+        //Better results than just threshold : Canny then Morph
         //EVEN BETTER : Morph then Canny!
         morph(processedMat);
         thresh(processedMat);
@@ -335,8 +334,6 @@ public class Utils {
             return ret;
     }
     public static List<Point>  checkForMarkers(Mat warpLevel1) {
-//        TODO Make this run less frequently, also check how to release List<>
-
         Mat warpErodedSub;
         Mat marker;
         if(SC.ERODE_ON) {
@@ -347,7 +344,22 @@ public class Utils {
             warpErodedSub = warpLevel1;
             marker = SC.markerToMatch;
         }
+        //TODO: make this part lightweight somehow!
 
+        // int curWidth = marker.width(), best_scale=100;
+        // double maxT=0;
+        // for(int scale=120;scale>79;scale-=10) {
+        //     Mat marker_res = resize_util(marker, (int) ((curWidth * scale)/100f));
+        //     Pair<Point,Double> localMax = getMaxLoc(warpErodedSub,marker_res);
+        //     marker_res.release();
+        //     if(maxT < localMax.second){
+        //         best_scale = scale;
+        //         maxT = localMax.second;
+        //     }
+        // }
+        // Log.d(TAG,"Best scale: "+best_scale + " maxT: "+maxT);
+        // Mat marker_best  = resize_util(marker, (int) ((curWidth * best_scale)/100f));
+        // marker.release();
         int h1 = warpErodedSub.rows();
         int w1 = warpErodedSub.cols();
         int midh = h1/3;
@@ -380,9 +392,9 @@ public class Utils {
         return points;
     }
 
-    public static Mat four_point_transform_scaled(Mat outMat, Mat inputMat, Point[] points) {
-        float scaleW = outMat.cols()/(float)inputMat.cols();
-        float scaleH = outMat.rows()/(float)inputMat.rows();
+    public static Mat four_point_transform_scaled(Mat outMat, int inCols,int inRows, Point[] points) {
+        float scaleW = outMat.cols()/(float)inCols;
+        float scaleH = outMat.rows()/(float)inRows;
         Point[] scaled_pts = new Point[] {
                 new Point(points[0].x*scaleW, points[0].y*scaleH),
                 new Point(points[1].x*scaleW, points[1].y*scaleH),
@@ -456,9 +468,10 @@ public class Utils {
     }
 
 
-    public static double getMaxCosine(double maxCosine, Point[] approxPoints) {
+    public static double getMaxCosine(List<Point> approxPoints) {
+        double maxCosine = 0;
         for (int i = 2; i < 5; i++) {
-            double cosine = Math.abs(angle(approxPoints[i % 4], approxPoints[i - 2], approxPoints[i - 1]));
+            double cosine = Math.abs(angle(approxPoints.get(i % 4), approxPoints.get(i - 2), approxPoints.get(i - 1)));
             maxCosine = Math.max(cosine, maxCosine);
         }
         return maxCosine;
@@ -570,10 +583,27 @@ public class Utils {
             Imgproc.resize(image,resized ,sz, 0,0 ,Imgproc.INTER_CUBIC);
         return resized;
     }
+
     public static Mat resize_util(Mat image, int u_width) {
         if(image.cols() == 0)return image;
         int u_height = (image.rows() * u_width)/image.cols();
         return resize_util(image,u_width,u_height);
+    }
+
+    public static void resize_util_inplace(Mat image, int u_width, int u_height) {
+        Size sz = new Size(u_width,u_height);
+        if(image.cols() > u_width)
+            // for downscaling
+            Imgproc.resize(image,image ,sz, 0,0 ,Imgproc.INTER_AREA);
+        else
+            // for upscaling
+            Imgproc.resize(image,image ,sz, 0,0 ,Imgproc.INTER_CUBIC);
+    }
+
+    public static void resize_util_inplace(Mat image, int u_width) {
+        if(image.cols() == 0)return;
+        int u_height = (image.rows() * u_width)/image.cols();
+        resize_util_inplace(image,u_width,u_height);
     }
 
     public static Bitmap matToBitmapRotate(Mat processedMat){

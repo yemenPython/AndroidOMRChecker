@@ -55,6 +55,7 @@ import org.opencv.imgcodecs.Imgcodecs;
 import org.opencv.imgproc.Imgproc;
 
 import java.io.File;
+import java.util.Arrays;
 import java.util.List;
 
 import static android.view.View.GONE;
@@ -77,11 +78,14 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
             android.Manifest.permission.CAMERA
     };
     private Bitmap copyBitmap;
-    private Bitmap saveBitmap;
+    private Mat saveOutMat;
+    private int saveRows, saveCols;
+    private Point[] savePoints;
     private ViewGroup containerScan;
     private FrameLayout acceptLayout;
     private LinearLayout captureHintLayout;
     private View cropAcceptBtn;
+    private View cropRejectBtn;
     private TextView captureHintText;
     private TextView timeElapsedText;
     // private ImageView cropImageView;
@@ -90,10 +94,10 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     CameraBridgeViewBase mOpenCvCameraView;
     SC configController;
 
-    public boolean acceptLayoutShowing = false;
+    public boolean acceptLayoutShowing = false, checkMarkerBegun=false, canCheckMarker=false;
 
     private ScanCanvasView scanCanvasView;
-    private CountDownTimer autoCaptureTimer;
+    private CountDownTimer autoCaptureTimer, checkMarkerTimer;
     private int secondsLeft;
     private boolean isCapturing = false;
 
@@ -187,28 +191,56 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                 v.setEnabled(false);
                 v.setClickable(false);
                 Log.d("custom"+TAG, "Image Accepted.");
+                // Done: check existing IMAGE_CTR there
+                FileUtils.checkMakeDirs(SC.CURR_FOLDER);
+                SC.IMAGE_CTR = new File(SC.CURR_FOLDER).listFiles(SC.jpgFilter).length + 1;
                 final String IMAGE_NAME = SC.IMAGE_PREFIX + "_" +SC.IMAGE_CTR+".jpg";
                 Toast.makeText(ScanActivity.this, "Saving to: " + IMAGE_NAME, Toast.LENGTH_SHORT).show();
                 new Thread(new Runnable() {
                     @Override
                     public void run() {
-                        FileUtils.checkMakeDirs(SC.CURR_FOLDER);
+                        
+                        Mat warpOriginal = Utils.four_point_transform_scaled(saveOutMat, saveCols, saveRows, savePoints);
+                        Bitmap saveBitmap = Utils.matToBitmapRotate(warpOriginal);
+                        warpOriginal.release();
                         boolean success = FileUtils.saveBitmap(saveBitmap, SC.CURR_FOLDER, IMAGE_NAME);
                         Log.d("custom"+TAG, "Image Saved.");
                     }
                 }).start();
                 Log.d("custom"+TAG, "Save Thread started.");
-                SC.IMAGE_CTR++;
                 cancelAutoCapture();
                 v.setEnabled(true);
                 v.setClickable(true);
             }
         });
 
-        for( int id : new int []{R.id.xray_btn,R.id.canny_btn,R.id.morph_btn,R.id.erode_sub_btn,R.id.contour_btn} ){
-            JellyToggleButton button = findViewById(id);
-            cancelAutoCapture();
-            button.setChecked(false);
+        cropRejectBtn = findViewById(R.id.crop_reject_btn);
+        cropRejectBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                cancelAutoCapture();
+            }
+        });
+        for( int id : new int []{R.id.xray_btn,R.id.clahe_btn,R.id.gamma_btn,R.id.contour_btn} ){
+            JellyToggleButton btn = findViewById(id);
+            btn.setChecked(false);
+
+            btn.setOnStateChangeListener(new JellyToggleButton.OnStateChangeListener() {
+                @Override
+                public void onStateChange(float process, State state, JellyToggleButton jtb) {
+                    cancelAutoCapture();
+                }
+            });
+        }
+        for( int id : new int []{R.id.hover_btn,R.id.canny_btn,R.id.morph_btn} ){
+            JellyToggleButton btn = findViewById(id);
+            btn.setChecked(true);
+            btn.setOnStateChangeListener(new JellyToggleButton.OnStateChangeListener() {
+                @Override
+                public void onStateChange(float process, State state, JellyToggleButton jtb) {
+                    cancelAutoCapture();
+                }
+            });
         }
 
         // flash functionality
@@ -259,10 +291,10 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                                 SC.INPUT_DIR = splits[0]+"/";
                                 int ctr=0;
                                 for(String s : splits){
-                                    tmp += s;
+                                    tmp = tmp+s+"/";
                                     ctr++;
                                     if(ctr == splits.length-1){
-                                        SC.INPUT_DIR = tmp+"/";
+                                        SC.INPUT_DIR = tmp;
                                     }
                                     if(ctr == splits.length){
                                         SC.IMAGE_PREFIX = s;
@@ -300,7 +332,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
             Toast.makeText(this, "Marker Loaded from: "+SC.MARKER_DIR, Toast.LENGTH_SHORT).show();
         }
 
-        SC.markerToMatch = Utils.resize_util(Imgcodecs.imread(mFile.getAbsolutePath(),Imgcodecs.IMREAD_GRAYSCALE), (int) SC.uniform_width_hd/SC.marker_scale_fac);
+        SC.markerToMatch = Utils.resize_util(Imgcodecs.imread(mFile.getAbsolutePath(),Imgcodecs.IMREAD_GRAYSCALE), (int) SC.uniform_width/SC.marker_scale_fac);
         Imgproc.blur(SC.markerToMatch, SC.markerToMatch, new Size(2,2));
         SC.markerEroded = Utils.erodeSub(SC.markerToMatch);
         Utils.logShape("markerToMatch", SC.markerToMatch);
@@ -366,12 +398,14 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     public Mat onCameraFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
         // internally it is a mat-
         outMat = inputFrame.rgba();
-        // outMat = inputFrame.gray(); <-- TOO SLOW!
+        Imgproc.cvtColor(outMat, outMat, Imgproc.COLOR_BGR2GRAY, 4);
+        // outMat = inputFrame.gray(); //<-- MUCH SLOWER THAN CVTCOLOR!
         configController.updateConfig();
         // Utils.logShape("outMat",outMat);
         SC.CLAHE_ON = checkBtn(R.id.clahe_btn);
         SC.GAMMA_ON = checkBtn(R.id.gamma_btn);
-        SC.ERODE_ON = checkBtn(R.id.erode_sub_btn);
+        SC.ERODE_ON = checkBtn(R.id.hover_btn);
+
         Mat processedMat = Utils.preProcessMat(outMat);
         // Core.rotate(processedMat, processedMat, Core.ROTATE_90_CLOCKWISE);
 //        Utils.logShape("processedMat",processedMat);
@@ -430,7 +464,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
         double resultHeight = Math.max(points[1].x - points[0].x, points[2].x - points[3].x);
         //Width calculated on X axis
         double resultWidth = Math.max(points[3].y - points[0].y, points[2].y - points[1].y);
-
+        List<Point> pointsList = Arrays.asList(points);
         ImageDetectionProperties imgDetectionPropsObj
                 = new ImageDetectionProperties(previewWidth, previewHeight, resultWidth, resultHeight,
                 previewArea, contourArea, points[0], points[1], points[2], points[3]);
@@ -457,33 +491,45 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
             scanHint = ScanHint.MOVE_AWAY;
         }
         else {
-            if (imgDetectionPropsObj.isAngleNotCorrect(points)) {
+            if (imgDetectionPropsObj.isAngleNotCorrect(pointsList)) {
                 cancelAutoCapture();
                 scanHint = ScanHint.ADJUST_ANGLE;
             }
             else {
+                // startCheckMarker();
                 Mat warpLevel1 = Utils.four_point_transform(processedMat, points);
-
+                Utils.resize_util_inplace(warpLevel1, SC.uniform_width, SC.uniform_height);
                 List<Point> markerPts = Utils.checkForMarkers(warpLevel1);
-                for( Point matchLoc : markerPts) {
-                    //Draw rectangle on result image
-                    Imgproc.rectangle(warpLevel1, matchLoc, new Point(matchLoc.x + SC.markerToMatch.cols(), matchLoc.y + SC.markerToMatch.rows()), new Scalar(5, 5, 5), 4);
+                if(SC.ERODE_ON) {
+                    for( Point matchLoc : markerPts) {
+                        //Draw rectangle on result image
+                        Imgproc.rectangle(warpLevel1, matchLoc, new Point(matchLoc.x + SC.markerToMatch.cols(), matchLoc.y + SC.markerToMatch.rows()), new Scalar(5, 5, 5), 4);
+                    }
                 }
+
                 Bitmap cameraBitmap = Utils.matToBitmapRotate(warpLevel1);
                 scanCanvasView.setHoverBitmap(cameraBitmap);
-                if((markerPts.size() != 4)){
-                    // cancelAutoCapture(); <-- bug prone!
-                    scanHint = ScanHint.HOLD_STILL;
+
+                if(markerPts.size()==4 && Utils.getMaxCosine(markerPts) >= 0.30){
+                    scanHint = ScanHint.CAPTURING_IMAGE;
+                    // (low FPS target) creating a bitmap every frame is MEMORY HOGGING!
+                    // run less times
+                    if(acceptLayoutShowing) {
+                        if(saveOutMat != null)
+                            saveOutMat.release();
+                        saveOutMat = outMat.clone();
+                        saveCols = processedMat.cols();
+                        saveRows = processedMat.rows();
+                        savePoints = points.clone();
+                    }
+                    tryAutoCapture(scanHint);
                 }
                 else{
-                    scanHint = ScanHint.CAPTURING_IMAGE;
-                    Mat warpOriginal = Utils.four_point_transform_scaled(outMat, processedMat, points);
-                    saveBitmap =  Utils.matToBitmapRotate(warpOriginal);
-                    tryAutoCapture(scanHint);
+                    scanHint = ScanHint.HOLD_STILL;
                 }
             }
         }
-        
+        // ATTENTION: axes are swapped
         Path path = new Path();
         //Points are drawn in anticlockwise direction
         path.moveTo(previewWidth - (float) points[0].y, (float) points[0].x);
@@ -538,7 +584,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
     //     // cropImageView.setScaleType(ImageView.ScaleType.FIT_XY);
     // }
 
-    private void autoCapture(ScanHint scanHint) {
+    private void doAutoCapture(ScanHint scanHint) {
         Log.d(TAG,"autoCapture called.");
         if (isCapturing) return;
         Log.d(TAG,"autoCapture check.");
@@ -579,7 +625,7 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                             acceptLayoutShowing = false;
                             acceptLayout.setVisibility(View.GONE);
                             timeElapsedText.setText( res.getString(R.string.timer_text,0));
-                            autoCapture(scanHint);
+                            doAutoCapture(scanHint);
                         }
                     };
                     autoCaptureTimer.start();
@@ -596,6 +642,41 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                     autoCaptureTimer.cancel();
                     secondsLeft = 0;
                     acceptLayout.setVisibility(View.GONE);
+                }
+            });
+        }
+    }
+    private void stopCheckMarker() {
+        // for check marker limiting
+        if(checkMarkerBegun){
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    checkMarkerBegun = false;
+                    checkMarkerTimer.cancel();
+                }
+            });
+        }
+    }
+    private void startCheckMarker() {
+        if(!checkMarkerBegun) {
+            checkMarkerBegun = true;
+            canCheckMarker = false;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+
+                    checkMarkerTimer = new CountDownTimer(SC.HOLD_TIMER * 1000 , 500) {
+                        public void onTick(long millisUntilFinished) {
+                            // secondsLeft = Math.round((float) millisUntilFinished / 1000.0f);
+                            // timeElapsedText.setText( res.getString(R.string.timer_text,secondsLeft));
+                        }
+
+                        public void onFinish() {
+                            canCheckMarker = true;
+                        }
+                    };
+                    checkMarkerTimer.start();
                 }
             });
         }

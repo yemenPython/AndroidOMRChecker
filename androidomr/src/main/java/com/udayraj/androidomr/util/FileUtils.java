@@ -22,8 +22,10 @@ public class FileUtils {
     }
     public static void checkMakeDirs(String folderpath){
         File folder = new File(folderpath);
-        if(!folder.exists())
-            Log.d("custom"+TAG, "Making new directories for" + folderpath);
+        if(!folder.exists()) {
+            Log.d("custom" + TAG, "Making new directories for" + folderpath);
+
+        }
         folder.mkdirs();
     }
     public static boolean saveBitmap(Bitmap bitmap, String folderpath, String filename, int mQuality) {

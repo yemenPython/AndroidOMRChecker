@@ -156,16 +156,24 @@
 
                 <!-- Final layer: Accept Reject Buttons -->
                 <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_gravity="bottom|end"
+                    android:layout_width="wrap_content"
+                    android:layout_height="match_parent"
+                    android:layout_gravity="end|center"
                     android:layout_marginBottom="40dp"
+                    android:orientation="vertical"
                     android:gravity="center">
-
+                    <!--layout_weight is divided only accross 0dp elements - good!-->
                     <View
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
-                        android:layout_weight="1" />
+                        android:layout_weight="0.5"
+                        />
+                    <ImageView
+                        android:id="@+id/crop_reject_btn"
+                        android:layout_width="50dp"
+                        android:layout_height="50dp"
+                        android:alpha="0.8"
+                        android:src="@drawable/reject" />
 
                     <TextView
                         android:id="@+id/time_elapsed_text"
@@ -175,36 +183,26 @@
                         android:layout_gravity="center_horizontal"
                         android:gravity="center"
                         android:paddingBottom="4dp"
-                        android:paddingTop="12dp"
-                        android:paddingLeft="12dp"
-                        android:paddingRight="12dp"
+                        android:paddingTop="5dp"
+                        android:paddingLeft="5dp"
+                        android:paddingRight="5dp"
                         android:text="@string/finding_rect"
                         android:textColor="@color/orange"
                         android:textSize="@dimen/text_size_18" />
                     <ImageView
                         android:id="@+id/crop_accept_btn"
-                        android:layout_width="50dp"
                         android:contentDescription="@string/default_on_text"
+                        android:layout_width="50dp"
                         android:layout_height="50dp"
                         android:alpha="0.8"
                         android:src="@drawable/accept" />
 
-                    <!--<View-->
-                    <!--android:layout_width="0dp"-->
-                    <!--android:layout_height="match_parent"-->
-                    <!--android:layout_weight="0.6" />-->
-
-                    <!--<ImageView-->
-                    <!--android:id="@+id/crop_reject_btn"-->
-                    <!--android:layout_width="50dp"-->
-                    <!--android:layout_height="50dp"-->
-                    <!--android:alpha="0.8"-->
-                    <!--android:src="@drawable/reject" />-->
-
                     <View
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
-                        android:layout_weight="1" />
+                        android:layout_weight="0.5"
+                        />
+
                 </LinearLayout>
             </FrameLayout>
         </FrameLayout>
@@ -376,7 +374,7 @@
                 android:layout_marginRight="10dp"
                 >
                 <com.nightonke.jellytogglebutton.JellyToggleButton
-                    android:id="@+id/erode_sub_btn"
+                    android:id="@+id/hover_btn"
                     app:jtbJelly="lazy_tremble_body_slim_jim"
                     app:jtbDuration="200"
                     app:jtbLeftBackgroundColor="@android:color/black"
@@ -387,7 +385,7 @@
                     android:layout_weight="1"
                     android:layout_height="wrap_content"
                     xmlns:app="http://schemas.android.com/apk/res-auto"
-                    app:jtbLeftText="@string/erode_sub_on"
+                    app:jtbLeftText="@string/hover_on"
                     app:jtbRightText="@string/normal"
                     app:jtbLeftTextSize="15sp"
                     app:jtbRightTextSize="15sp"
@@ -457,7 +455,7 @@
                         app:circleTextColor="@color/black"
                         app:circleTextSize="@dimen/value_bar_circleTextSize"
                         app:fillColor="@color/white"
-                        app:currentValue="3"
+                        app:currentValue="@string/v_ksize_blur"
                         app:minValue="0"
                         app:maxValue="10"
                         app:stepValue="1"
@@ -489,7 +487,7 @@
                         app:circleTextColor="@color/black"
                         app:circleTextSize="@dimen/value_bar_circleTextSize"
                         app:fillColor="@color/white"
-                        app:currentValue="10"
+                        app:currentValue="@string/v_ksize_morph"
                         app:minValue="1"
                         app:maxValue="15"
                         app:stepValue="1"
@@ -521,7 +519,7 @@
                         app:circleTextColor="@color/black"
                         app:circleTextSize="@dimen/value_bar_circleTextSize"
                         app:fillColor="@color/white"
-                        app:currentValue="55"
+                        app:currentValue="@string/v_canny_l"
                         app:minValue="10"
                         app:maxValue="100"
                         app:stepValue="5"
@@ -553,7 +551,7 @@
                         app:circleTextColor="@color/black"
                         app:circleTextSize="@dimen/value_bar_circleTextSize"
                         app:fillColor="@color/white"
-                        app:currentValue="185"
+                        app:currentValue="@string/v_canny_u"
                         app:minValue="100"
                         app:maxValue="240"
                         app:stepValue="5"
@@ -586,7 +584,7 @@
                         app:circleTextColor="@color/black"
                         app:circleTextSize="@dimen/value_bar_circleTextSize"
                         app:fillColor="@color/white"
-                        app:currentValue="150"
+                        app:currentValue="@string/v_gamma"
                         app:minValue="100"
                         app:maxValue="300"
                         app:stepValue="10"
@@ -618,10 +616,10 @@
                         app:circleTextColor="@color/black"
                         app:circleTextSize="@dimen/value_bar_circleTextSize"
                         app:fillColor="@color/white"
-                        app:currentValue="220"
+                        app:currentValue="@string/v_trunc_thresh"
                         app:minValue="50"
-                        app:maxValue="250"
-                        app:stepValue="10"
+                        app:maxValue="255"
+                        app:stepValue="5"
                         />
                 </LinearLayout>
 
@@ -651,7 +649,7 @@
                         app:circleTextColor="@color/black"
                         app:circleTextSize="@dimen/value_bar_circleTextSize"
                         app:fillColor="@color/white"
-                        app:currentValue="55"
+                        app:currentValue="@string/v_zero_thresh"
                         app:minValue="0"
                         app:maxValue="255"
                         app:stepValue="5"
@@ -683,7 +681,7 @@
                         app:circleTextColor="@color/black"
                         app:circleTextSize="@dimen/value_bar_circleTextSize"
                         app:fillColor="@color/white"
-                        app:currentValue="5"
+                        app:currentValue="@string/v_autocap_timer"
                         app:minValue="2"
                         app:maxValue="10"
                         app:stepValue="1"

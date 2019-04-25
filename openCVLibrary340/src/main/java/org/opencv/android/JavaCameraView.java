@@ -143,9 +143,11 @@ public class JavaCameraView extends CameraBridgeViewBase implements PreviewCallb
             /* Now set camera parameters */
             try {
                 Camera.Parameters params = mCamera.getParameters();
-                Log.d(TAG, "getSupportedPreviewSizes()");
                 List<android.hardware.Camera.Size> sizes = params.getSupportedPreviewSizes();
-
+                Log.d(TAG, "getSupportedPreviewSizes()");
+                for(android.hardware.Camera.Size frameSize  : sizes){
+                    Log.d(TAG,  Integer.valueOf((int)frameSize.width) + "x" + Integer.valueOf((int)frameSize.height));
+                }
                 if (sizes != null) {
                     /* Select the size that fits surface considering maximum size allowed */
                     frameSize = calculateCameraFrameSize(sizes, new JavaCameraSizeAccessor(), width, height);

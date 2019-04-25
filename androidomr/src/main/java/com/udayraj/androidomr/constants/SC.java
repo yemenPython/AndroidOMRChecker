@@ -11,6 +11,9 @@ import com.udayraj.androidomr.activity.ScanActivity;
 
 import org.opencv.core.Mat;
 
+import java.io.File;
+import java.io.FileFilter;
+
 /**
  * This class defines constants
  */
@@ -22,7 +25,16 @@ public class SC {
     public static final String STORAGE_HOME =  Environment.getExternalStorageDirectory().getAbsolutePath() +"/";
     public static final String MARKER_DIR = "OMRTechno/";
     public static final String STORAGE_FOLDER =  STORAGE_HOME + MARKER_DIR;
-    public static String INPUT_DIR = "OMRTechno/";
+    public static final FileFilter jpgFilter  = new FileFilter() {
+        @Override
+        public boolean accept(File pathname) {
+            if(pathname.isFile() && pathname.getName().endsWith(".jpg"))
+                return true;
+            return false;
+        }
+    };
+
+    public static String INPUT_DIR = "OMRTechno/JE/";
     public static String IMAGE_PREFIX = "omr";
     public static String CURR_FOLDER =  STORAGE_HOME + INPUT_DIR;
     public static int IMAGE_CTR = 1;
@@ -31,19 +43,25 @@ public class SC {
     // public static String APPDATA_FOLDER;
     // SC.APPDATA_FOLDER = ScanActivity.this.getExternalFilesDir(null).getAbsolutePath()+"/" + SC.IMAGES_DIR;
 
+    // this width will directly affect FPS
     public static final int uniform_width_hd = (int) (1000 / 1.75);
-    public static final int marker_scale_fac = 38;
     public static final int uniform_height_hd = (int)(1231 / 1.75);
+    // For cropped paper
+    public static final int uniform_width = (int) (1000 / 2.5);
+    public static final int uniform_height = (int)(1231 / 2.5);
+    public static final int marker_scale_fac = 26;
     public static final double thresholdVar = 0.3;
 
-    public static int AUTOCAP_TIMER = 3; // will be multiplied by 1000
-    public static int CANNY_THRESHOLD_L = 55;
-    public static int CANNY_THRESHOLD_U = 185;
+//        <!--Starting Debug menu config in values/strings.xml -->
     public static int KSIZE_BLUR = 3;
     public static int KSIZE_CLOSE = 10;
-    public static int TRUNC_THRESH = 220;
-    public static int ZERO_THRESH = 155;
     public static int GAMMA_HIGH = 125 ; // will be divided by 100
+    public static int CANNY_THRESHOLD_L = 85;
+    public static int CANNY_THRESHOLD_U = 185;
+    public static int TRUNC_THRESH = 150;
+    public static int ZERO_THRESH = 155;
+    public static int AUTOCAP_TIMER = 3; // will be multiplied by 1000
+    public static int HOLD_TIMER = 5; // will be multiplied by 100
 
     //TODO: put these into interface
     public static boolean CLAHE_ON = true;

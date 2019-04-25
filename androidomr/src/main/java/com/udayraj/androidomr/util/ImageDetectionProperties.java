@@ -3,6 +3,8 @@ package com.udayraj.androidomr.util;
 import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.Point;
 
+import java.util.List;
+
 /**
  * This class holds configuration of detected edges
  */
@@ -17,7 +19,7 @@ public class ImageDetectionProperties {
     private final Point topRightPoint;
     private final double previewArea;
     private final double resultArea;
-    private final double EDGE_MARGIN_FAC = 0.07;
+    private final double EDGE_MARGIN_FAC = 0.02;
     private final int EDGE_MARGIN_HZ;
     private final int EDGE_MARGIN_VT;
     public ImageDetectionProperties(double previewWidth, double previewHeight, double resultWidth,
@@ -53,10 +55,10 @@ public class ImageDetectionProperties {
     public boolean isDetectedAreaAboveLimit() { return resultArea > previewArea * 0.90; }
 
     public boolean isDetectedAreaBelowLimits() {
-        return resultArea < previewArea * 0.25;
+        return resultArea < previewArea * 0.15;
     }
 
-    public boolean isAngleNotCorrect(Point[] approx) {
+    public boolean isAngleNotCorrect(List<Point> approx) {
         return isMaxCosineTooHigh(approx) || isLeftEdgeDistorted() || isRightEdgeDistorted();
     }
 
@@ -68,12 +70,8 @@ public class ImageDetectionProperties {
         return Math.abs(topLeftPoint.y - bottomLeftPoint.y) > 100;
     }
 
-    private boolean isMaxCosineTooHigh(Point[] approxPoints) {
-        double maxCosine = 0;
-//        Point[] approxPoints = approx.toArray();
-        maxCosine = Utils.getMaxCosine(maxCosine, approxPoints);
-//        return maxCosine >= 0.085; //(smallest angle is below 87 deg)
-        return maxCosine >= 0.35;
+    private boolean isMaxCosineTooHigh(List<Point> approxPoints) {
+        return Utils.getMaxCosine(approxPoints) >= 0.30;
     }
 
     public boolean isEdgeTouching() {
