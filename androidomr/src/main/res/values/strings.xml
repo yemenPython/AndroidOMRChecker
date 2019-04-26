@@ -35,14 +35,16 @@
     <string name="v_canny_l">30</string>
     <string name="v_canny_u">150</string>
     <string name="v_gamma">125</string>
+    <string name="v_marker_scale">100</string>
     <string name="v_trunc_thresh">235</string>
     <!-- Most useful: zero thresh-->
     <string name="v_zero_thresh">190</string>
-    <string name="v_autocap_timer">4</string>
+    <string name="v_autocap_timer">6</string>
 
     <!--Slider labels-->
     <string name="autocap_timer">Timer</string>
     <string name="gamma">Gamma</string>
+    <string name="marker_scale">MScale</string>
     <string name="trunc_thresh">Truncate</string>
     <string name="ksize_blur">BlurK</string>
     <string name="ksize_morph">MorphK</string>

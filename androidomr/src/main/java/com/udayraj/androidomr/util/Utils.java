@@ -333,7 +333,7 @@ public class Utils {
             matchOut.release();
             return ret;
     }
-    public static List<Point>  checkForMarkers(Mat warpLevel1) {
+    public static List<Point> findMarkers(Mat warpLevel1) {
         Mat warpErodedSub;
         Mat marker;
         if(SC.ERODE_ON) {
@@ -346,7 +346,7 @@ public class Utils {
         }
         //TODO: make this part lightweight somehow!
 
-        // int curWidth = marker.width(), best_scale=100;
+        int curWidth = marker.width();//, best_scale=100;
         // double maxT=0;
         // for(int scale=120;scale>79;scale-=10) {
         //     Mat marker_res = resize_util(marker, (int) ((curWidth * scale)/100f));
@@ -358,7 +358,7 @@ public class Utils {
         //     }
         // }
         // Log.d(TAG,"Best scale: "+best_scale + " maxT: "+maxT);
-        // Mat marker_best  = resize_util(marker, (int) ((curWidth * best_scale)/100f));
+        Mat marker_best  = resize_util(marker, (int) ((curWidth * SC.MARKER_SCALE)/100f));
         // marker.release();
         int h1 = warpErodedSub.rows();
         int w1 = warpErodedSub.cols();
@@ -377,10 +377,10 @@ public class Utils {
                 warpErodedSub.submat(midh, h1,midw, w1)
         };
         List<Point> points = new ArrayList<>();
-        Pair<Point,Double> allMax = getMaxLoc(warpErodedSub,marker);
+        Pair<Point,Double> allMax = getMaxLoc(warpErodedSub,marker_best);
 
         for (int k=0;k<4;k++){
-            Pair<Point,Double> localMax = getMaxLoc(quads[k],marker);
+            Pair<Point,Double> localMax = getMaxLoc(quads[k],marker_best);
             if((allMax.second - localMax.second) <= SC.thresholdVar){
                 localMax.first.x += origins[k].x;
                 localMax.first.y += origins[k].y;
@@ -389,9 +389,24 @@ public class Utils {
             quads[k].release();
         }
 
+        if(SC.ERODE_ON) {
+            for( Point matchLoc : points) {
+                //Draw rectangle on result image
+                Imgproc.rectangle(warpLevel1, matchLoc, new Point(matchLoc.x + marker_best.cols(), matchLoc.y + marker_best.rows()), new Scalar(5, 5, 5), 4);
+            }
+        }
+        Core.rotate(warpLevel1,warpLevel1, Core.ROTATE_90_CLOCKWISE); //ROTATE_180 or ROTATE_90_COUNTERCLOCKWISE
+        Imgproc.rectangle(warpLevel1, new Point(midw-10,h1/2-20), new Point(midw+150,h1/2), new Scalar(225, 225, 225), -1);
+
+        Imgproc.putText(warpLevel1, "Match: "+ (int)(allMax.second*100)+ "%",
+                new Point(midw,h1/2),
+                Core.FONT_HERSHEY_SIMPLEX, 0.75, new Scalar(50,50,50), 2);
+        Core.rotate(warpLevel1,warpLevel1, Core.ROTATE_90_COUNTERCLOCKWISE); //ROTATE_180 or ROTATE_90_COUNTERCLOCKWISE
+
+        marker_best.release();
+
         return points;
     }
-
     public static Mat four_point_transform_scaled(Mat outMat, int inCols,int inRows, Point[] points) {
         float scaleW = outMat.cols()/(float)inCols;
         float scaleH = outMat.rows()/(float)inRows;

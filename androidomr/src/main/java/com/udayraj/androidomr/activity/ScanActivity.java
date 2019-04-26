@@ -499,13 +499,8 @@ public class ScanActivity extends AppCompatActivity implements IScanner, CameraB
                 // startCheckMarker();
                 Mat warpLevel1 = Utils.four_point_transform(processedMat, points);
                 Utils.resize_util_inplace(warpLevel1, SC.uniform_width, SC.uniform_height);
-                List<Point> markerPts = Utils.checkForMarkers(warpLevel1);
-                if(SC.ERODE_ON) {
-                    for( Point matchLoc : markerPts) {
-                        //Draw rectangle on result image
-                        Imgproc.rectangle(warpLevel1, matchLoc, new Point(matchLoc.x + SC.markerToMatch.cols(), matchLoc.y + SC.markerToMatch.rows()), new Scalar(5, 5, 5), 4);
-                    }
-                }
+                List<Point> markerPts = Utils.findMarkers(warpLevel1);
+                // warpLevel1 will have debug info drawn on it
 
                 Bitmap cameraBitmap = Utils.matToBitmapRotate(warpLevel1);
                 scanCanvasView.setHoverBitmap(cameraBitmap);

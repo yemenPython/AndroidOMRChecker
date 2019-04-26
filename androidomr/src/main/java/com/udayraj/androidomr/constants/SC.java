@@ -56,6 +56,7 @@ public class SC {
     public static int KSIZE_BLUR = 3;
     public static int KSIZE_CLOSE = 10;
     public static int GAMMA_HIGH = 125 ; // will be divided by 100
+    public static int MARKER_SCALE = 100 ; // will be divided by 100
     public static int CANNY_THRESHOLD_L = 85;
     public static int CANNY_THRESHOLD_U = 185;
     public static int TRUNC_THRESH = 150;
@@ -78,6 +79,7 @@ public class SC {
     private final RangeSeekBarView s_TRUNC_THRESH;
     private final RangeSeekBarView s_ZERO_THRESH;
     private final RangeSeekBarView s_GAMMA_HIGH;
+    private final RangeSeekBarView s_MARKER_SCALE;
 
     public SC(ScanActivity s) {
         s_AUTOCAP_TIMER = s.findViewById(R.id.autocap_timer);
@@ -88,6 +90,7 @@ public class SC {
         s_TRUNC_THRESH = s.findViewById(R.id.trunc_thresh);
         s_ZERO_THRESH = s.findViewById(R.id.zero_thresh);
         s_GAMMA_HIGH = s.findViewById(R.id.gamma);
+        s_MARKER_SCALE = s.findViewById(R.id.marker_scale);
     }
     public void updateConfig(){
         AUTOCAP_TIMER = s_AUTOCAP_TIMER.getValue();
@@ -98,5 +101,6 @@ public class SC {
         TRUNC_THRESH = s_TRUNC_THRESH.getValue();
         ZERO_THRESH = s_ZERO_THRESH.getValue();
         GAMMA_HIGH = s_GAMMA_HIGH.getValue();
+        MARKER_SCALE = s_MARKER_SCALE.getValue();
     }
 }
