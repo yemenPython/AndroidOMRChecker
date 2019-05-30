@@ -1,8 +1,6 @@
 package com.udayraj.androidomr.interfaces;
 
-import android.graphics.Bitmap;
-
-import com.udayraj.androidomr.enums.ScanHint;
+import com.udayraj.androidomr.constants.ScanHint;
 
 /**
  * Interface between activity and surface view
